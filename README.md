@@ -1,22 +1,3 @@
 "# CSIT321 Project" 
 
-
-"GOIS THIS IS MANISHA:))"
-
-
-
-
-OUR LEADER IS THE BEST!!
-
-
-
-what is 1+1?
-"heyyyy!!"
-
-HAHAHAHAHAHAHAHAHAHH
-
-
-Idk what to write 
-
-
-Manisha is hacking our laptops
+Gusto - A multilingual restaurant assistant

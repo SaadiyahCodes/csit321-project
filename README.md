@@ -1,11 +1,7 @@
 "# CSIT321 Project" 
 
-HAHAHAHAHAHAHAHAHAHH
 
 "GOIS THIS IS MANISHA:))"
-
-
-
 
 
 
@@ -15,3 +11,6 @@ OUR LEADER IS THE BEST!!
 
 
 what is 1+1?
+"heyyyy!!"
+
+HAHAHAHAHAHAHAHAHAHH

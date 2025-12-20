@@ -1,3 +1,3 @@
-"# CSIT321 Project" 
+## CSIT321 Project
 
 Gusto - A multilingual restaurant assistant

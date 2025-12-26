@@ -12,4 +12,4 @@ dist/
 .DS_Store
 
 # Google Translate API credentials
-backend/google-credentials.json
+backend/google-translation.json

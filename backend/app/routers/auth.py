@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 #TEMPORARY ADMIN SIGNUP ENDPOINT
 @router.post("/signup-admin", response_model=UserResponse)
-async def signup_admin(user_data: UserCreate, db: Session = Depends(get_db)):
+async def signup_admin(user_data: UserCreate, restaurant_id: int=1, db: Session = Depends(get_db)):
     #check if user exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
@@ -26,7 +26,8 @@ async def signup_admin(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         hashed_password=get_password_hash(user_data.password),
         is_admin=True,
-        is_active=True
+        is_active=True,
+        restaurant_id=restaurant_id
     )
     db.add(new_admin)
     db.commit()

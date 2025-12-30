@@ -5,6 +5,7 @@ from app.db.base import Base
 from app.models import User
 from app.routers import auth
 from app.routers import admin
+from app.routers import menu
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -22,6 +23,7 @@ app.add_middleware(
 #Register routers
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(menu.router)
 
 @app.get("/")
 def root():

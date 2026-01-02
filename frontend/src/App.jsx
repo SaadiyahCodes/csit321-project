@@ -6,12 +6,18 @@ import Login from './routes/Login';
 import AdminDashboard from './routes/AdminDashboard';
 import AdminRoute from './routes/AdminRoute';
 import LandingPage from './routes/customer/LandingPage';
+import MenuPage from './routes/customer/MenuPage';
+import DishPreviewPage from './routes/customer/DishPreviewPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage/>} />
+        <Route path="/restaurant/:restaurantId/menu" element={<MenuPage/>} />
+        <Route path="/restaurant/:restaurantId/dish/:dishId" element={<DishPreviewPage/>} />
+
+        {/*Admin Portal */}
         <Route path="/login" element={<Login/>} />
 
         <Route

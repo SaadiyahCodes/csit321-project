@@ -1,12 +1,13 @@
 from pydantic import BaseModel, Field
 from enum import Enum
+from datetime import datetime
 
 # Enum for menu categories (allowed categories)
 class MenuCategory(str, Enum):
-    MAINS = "Mains"
-    SIDES = "Sides"
-    DESSERTS = "Desserts"
-    DRINKS = "Drinks"
+    MAINS = "mains"
+    SIDES = "sides"
+    DESSERTS = "dessert"
+    DRINKS = "drinks"
 
 # Schema for menu items
 class MenuItemBase(BaseModel):
@@ -14,9 +15,10 @@ class MenuItemBase(BaseModel):
     description: str = Field(default=None, max_length=255)
     price: float = Field (..., ge=0)
     category: MenuCategory
-    # image_url: str | None = None
     allergens: str | None = None #optional
     is_available: bool = True
+    image_url: str | None = None
+    ar_model_url: str | None = None
 
 # Schema for creating menu items
 class MenuItemCreate(MenuItemBase):
@@ -28,9 +30,10 @@ class MenuItemUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     price: float | None = Field(default=None, ge=0)
     category: MenuCategory | None = None
-    # image_url: str | None = None
     allergens: str | None = None
     is_available: bool | None = None
+    image_url: str | None = None
+    ar_model_url: str | None = None
 
 # Schema for responding with menu items
 class MenuItemResponse(MenuItemBase):

@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from app.chatbot_service import chatbot_service
 from app.mock_data import get_mock_menu
 import uuid
+from app.menu_rag import MenuRAG
 
 load_dotenv()
 
@@ -240,3 +241,71 @@ def clear_chat(session_id: str):
     """Clear conversation history"""
     chatbot_service.clear_conversation(session_id)
     return {"message": "Conversation cleared", "session_id": session_id}
+
+
+# ===== MENU SEARCH ENDPOINTS =====
+
+class MenuSearchRequest(BaseModel):
+    keywords: List[str]
+    allergies: Optional[List[str]] = None
+    category: Optional[str] = None
+    max_price: Optional[float] = None
+
+@app.post("/api/menu/search")
+def search_menu(request: MenuSearchRequest):
+    """
+    Smart menu search
+    
+    Example:
+    {
+        "keywords": ["spicy", "chicken"],
+        "allergies": ["dairy"],
+        "max_price": 50
+    }
+    """
+    menu_items = get_mock_menu()
+    rag = MenuRAG(menu_items)
+    
+    # Search by keywords
+    results = rag.search_by_keywords(
+        keywords=request.keywords,
+        exclude_allergens=request.allergies
+    )
+    
+    # Filter by category if specified
+    if request.category:
+        results = [item for item in results if item.get('category') == request.category]
+    
+    # Filter by price if specified
+    if request.max_price:
+        results = [item for item in results if item.get('price', 0) <= request.max_price]
+    
+    return {
+        "query": {
+            "keywords": request.keywords,
+            "allergies": request.allergies,
+            "category": request.category,
+            "max_price": request.max_price
+        },
+        "results": results[:10],  # Top 10 results
+        "count": len(results)
+    }
+
+@app.get("/api/menu/safe/{allergies}")
+def get_safe_menu(allergies: str):
+    """
+    Get dishes safe for specific allergies
+    
+    Example: /api/menu/safe/dairy,peanuts
+    """
+    menu_items = get_mock_menu()
+    rag = MenuRAG(menu_items)
+    
+    allergen_list = [a.strip() for a in allergies.split(',')]
+    safe_items = rag.get_safe_items(exclude_allergens=allergen_list)
+    
+    return {
+        "avoid_allergens": allergen_list,
+        "safe_dishes": safe_items,
+        "count": len(safe_items)
+    }

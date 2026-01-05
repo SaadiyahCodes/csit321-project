@@ -3,7 +3,10 @@ import os
 from typing import Dict, List
 from datetime import datetime
 from dotenv import load_dotenv
+from app.menu_rag import MenuRAG
+
 load_dotenv()
+
 
 class ChatbotService:
     def __init__(self):
@@ -80,6 +83,19 @@ Remember: You're helping someone choose their meal. Make it delightful! 🍽️"
             
             # Build conversation context
             system_prompt = self.get_system_prompt(menu_items, user_allergies)
+
+            # Use RAG to find relevant menu items based on message
+            rag = MenuRAG(menu_items)
+
+            # Extract keywords from message
+            keywords = message.lower().split()
+            relevant_items = rag.search_by_keywords(keywords, exclude_allergens=user_allergies)
+
+            # If we found relevant items, enhance the prompt
+            if relevant_items[:3]:  # Top 3 matches
+                system_prompt += f"\n\n🎯 MOST RELEVANT DISHES FOR THIS QUERY:\n"
+                system_prompt += rag.format_items_for_ai(relevant_items[:3])
+                system_prompt += "\n\nFocus on recommending these dishes first!"
             
             # Create full conversation for AI
             full_context = system_prompt + "\n\n"

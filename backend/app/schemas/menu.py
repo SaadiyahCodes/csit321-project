@@ -22,7 +22,7 @@ class MenuItemBase(BaseModel):
 
 # Schema for creating menu items
 class MenuItemCreate(MenuItemBase):
-    restaurant_id: int
+    restaurant_id: int | None = None
 
 # Schema for updating menu items (partial update)
 class MenuItemUpdate(BaseModel):

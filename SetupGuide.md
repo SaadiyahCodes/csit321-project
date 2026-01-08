@@ -27,3 +27,7 @@ Once you run `git pull` , do the following steps:
 - always ensure `_pycache_`, `node_modules` and `.env` files are written in your `.gitignore`. If `.gitignore` is at root level, it applies to all files in subdirectories too.
 
 - While activating the python venv, if it says system admin does not allow scripts to run, use temporary measures to bypass the settings. This must be run each session. `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`
+
+1. **Problem: `http://127.0.0.1:8000/` does not show `{"message":"Welcome to Gusto API"}` even after running uvicorn**
+
+Run `netstat -ano | findstr :8000` and kill any process running on the same port.

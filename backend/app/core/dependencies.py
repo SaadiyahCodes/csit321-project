@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
 from app.core.security import decode_access_token
+from jose import JWTError, jwt
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -44,3 +45,11 @@ async def get_current_admin_user(current_user: User = Depends(get_current_active
             detail="Not enough permission. Admin access required"
         )
     return current_user
+
+async def get_admin_restaurant_id(current_user: User = Depends(get_current_admin_user)) -> int:
+    if not current_user.restaurant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin user has no associated restaurant"
+        )
+    return current_user.restaurant_id

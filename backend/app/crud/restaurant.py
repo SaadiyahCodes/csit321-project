@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from app.models.restaurant import Restaurant
 from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate
+from app.models.user import User
 
 def get_all_restaurants(db: Session):
     return db.query(Restaurant).all()
@@ -38,3 +39,24 @@ def delete_restaurant(db: Session, restaurant_id: int):
     db.delete(restaurant)
     db.commit()
     return True
+
+# ADMIN FUNCTIONS
+
+def get_admin_restaurant(db: Session, admin_user: User):
+    if not admin_user.restaurant_id:
+        return None
+    return db.query(Restaurant).filter(Restaurant.id == admin_user.restaurant_id).first()
+
+def update_admin_restaurant(db: Session, admin_user: User, data: RestaurantUpdate):
+    restaurant = get_admin_restaurant(db, admin_user)
+    if not restaurant:
+        return None
+    
+    update_data = data.model_dump(exclude_unset=True)
+    print(f"Update data: {update_data}")
+    for key, value in update_data.items():
+        setattr(restaurant, key, value)
+
+    db.commit()
+    db.refresh(restaurant)
+    return restaurant

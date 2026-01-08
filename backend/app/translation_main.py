@@ -7,6 +7,10 @@ from app.chatbot_service import chatbot_service
 from app.mock_data import get_mock_menu
 import uuid
 from app.menu_rag import MenuRAG
+from app.order_service import order_service
+from app.voice_service import voice_service
+from fastapi import File, UploadFile
+import base64
 
 load_dotenv()
 
@@ -150,6 +154,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     intent: str
+    intent_meta: Optional[dict] = None
     session_id: str
     original_message: Optional[str] = None
     translated: bool = False
@@ -220,7 +225,8 @@ def chat(request: ChatRequest):
     
     return ChatResponse(
         response=response_text,
-        intent=result["intent"],
+        intent=result["intent"]["type"],
+        intent_meta=result["intent"],
         session_id=session_id,
         original_message=original_message,
         translated=translated
@@ -309,3 +315,222 @@ def get_safe_menu(allergies: str):
         "safe_dishes": safe_items,
         "count": len(safe_items)
     }
+
+
+# ===== ORDER MANAGEMENT ENDPOINTS =====
+
+class AddToCartRequest(BaseModel):
+    session_id: str
+    item_id: int
+    quantity: int = 1
+    notes: Optional[str] = None
+
+@app.post("/api/order/add")
+def add_to_cart(request: AddToCartRequest):
+    """
+    Add item to cart (called when chatbot confirms order)
+    
+    Example:
+    {
+        "session_id": "abc123",
+        "item_id": 1,
+        "quantity": 2,
+        "notes": "Extra spicy please"
+    }
+    """
+    # Get menu item
+    menu_items = get_mock_menu()
+    item = next((i for i in menu_items if i['id'] == request.item_id), None)
+    
+    if not item:
+        return {"error": "Item not found"}
+    
+    # Add to order
+    order = order_service.add_item(
+        session_id=request.session_id,
+        item=item,
+        quantity=request.quantity,
+        notes=request.notes
+    )
+    
+    return {
+        "success": True,
+        "order": order,
+        "message": f"Added {request.quantity}x {item['name']} to cart"
+    }
+
+@app.get("/api/order/{session_id}")
+def get_order(session_id: str):
+    """Get current order for session"""
+    order = order_service.get_order(session_id)
+    
+    if not order:
+        return {
+            "session_id": session_id,
+            "items": [],
+            "total": 0.0,
+            "message": "No order found"
+        }
+    
+    return order
+
+@app.delete("/api/order/{session_id}/item/{item_id}")
+def remove_from_cart(session_id: str, item_id: int):
+    """Remove item from cart"""
+    order = order_service.remove_item(session_id, item_id)
+    return {
+        "success": True,
+        "order": order,
+        "message": "Item removed"
+    }
+
+@app.delete("/api/order/{session_id}")
+def clear_cart(session_id: str):
+    """Clear entire cart"""
+    order_service.clear_order(session_id)
+    return {
+        "success": True,
+        "message": "Cart cleared"
+    }
+
+@app.get("/api/order/{session_id}/summary")
+def get_order_summary(session_id: str):
+    """Get formatted order summary"""
+    summary = order_service.get_order_summary(session_id)
+    order = order_service.get_order(session_id)
+    
+    return {
+        "session_id": session_id,
+        "summary": summary,
+        "order": order
+    }
+
+
+# ===== VOICE ENDPOINTS (STT/TTS) =====
+
+@app.post("/api/voice/stt")
+async def speech_to_text(
+    audio: UploadFile = File(...),
+    language: str = "en"
+):
+    """
+    Speech to Text
+    
+    Upload audio file and get text transcription
+    Supports: WAV, FLAC, MP3
+    """
+    try:
+        # Read audio file
+        audio_data = await audio.read()
+        
+        # Convert to text
+        result = voice_service.speech_to_text(audio_data, language)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "success": False
+        }
+
+@app.post("/api/voice/tts")
+def text_to_speech(
+    text: str,
+    language: str = "en"
+):
+    """
+    Text to Speech
+    
+    Convert text to audio (returns base64 encoded MP3)
+    
+    Example: POST /api/voice/tts?text=Hello&language=en
+    """
+    result = voice_service.text_to_speech(text, language)
+    return result
+
+class VoiceChatRequest(BaseModel):
+    audio_base64: str  # Base64 encoded audio
+    session_id: Optional[str] = None
+    language: str = "en"
+    allergies: Optional[List[str]] = None
+
+@app.post("/api/voice/chat")
+async def voice_chat(request: VoiceChatRequest):
+    """
+    Complete voice conversation flow
+    
+    1. Receive audio (base64)
+    2. Convert to text (STT)
+    3. Process with chatbot
+    4. Convert response to speech (TTS)
+    5. Return audio response (base64)
+    """
+    try:
+        # Decode audio
+        audio_data = base64.b64decode(request.audio_base64)
+        
+        # Speech to Text
+        stt_result = voice_service.speech_to_text(audio_data, request.language)
+        
+        if not stt_result.get('success'):
+            return {"error": "Speech recognition failed", "details": stt_result}
+        
+        user_text = stt_result['text']
+        
+        # Process with chatbot (reuse existing chat endpoint logic)
+        session_id = request.session_id or str(uuid.uuid4())
+        menu_items = get_mock_menu()
+        
+        # Translate to English if needed
+        if request.language != "en":
+            trans_result = translation_service.translate_text(
+                user_text, "en", request.language
+            )
+            if trans_result.get('success'):
+                user_text = trans_result['translated_text']
+        
+        # Get chatbot response
+        chat_result = chatbot_service.chat(
+            message=user_text,
+            session_id=session_id,
+            menu_items=menu_items,
+            user_allergies=request.allergies
+        )
+        
+        if chat_result.get('error'):
+            return {"error": "Chatbot error", "details": chat_result}
+        
+        bot_text = chat_result['response']
+        
+        # Translate back if needed
+        if request.language != "en":
+            trans_result = translation_service.translate_text(
+                bot_text, request.language, "en"
+            )
+            if trans_result.get('success'):
+                bot_text = trans_result['translated_text']
+        
+        # Text to Speech
+        tts_result = voice_service.text_to_speech(bot_text, request.language)
+        
+        if not tts_result.get('success'):
+            return {"error": "TTS failed", "details": tts_result}
+        
+        return {
+            "user_text": stt_result['text'],
+            "bot_text": bot_text,
+            "bot_audio": tts_result['audio'],
+            "audio_format": "mp3",
+            "intent": chat_result['intent'],
+            "session_id": session_id,
+            "success": True
+        }
+        
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "success": False
+        }

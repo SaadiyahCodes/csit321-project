@@ -15,7 +15,7 @@ class ChatbotService:
         
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'models/gemini-flash-latest'  # ← CHANGE THIS!
+            self.model_name = 'models/gemini-flash-latest'
             self.enabled = True
             print("✅ Chatbot service initialized (Gemini)")
         else:
@@ -147,27 +147,56 @@ Remember: You're helping someone choose their meal. Make it delightful! 🍽️"
                 "error_message": str(e)
             }
     
-    def _detect_intent(self, user_message: str, ai_response: str) -> str:
-        """Detect if user wants to order or just inquiring"""
+    def _detect_intent(self, user_message: str, ai_response: str) -> Dict:
+        """Enhanced intent detection with item extraction"""
         
-        # Order keywords
-        order_keywords = [
-            'yes', 'yeah', 'sure', 'ok', 'okay', 'add it', 'ill take it', 
-            'i want', 'give me', 'order', 'get me', 'نعم', 'طيب', 'أريد'
+        message_lower = user_message.lower()
+        
+        # Strong order confirmation keywords
+        strong_order_keywords = [
+            'yes', 'yeah', 'sure', 'ok', 'okay', 'add it', "i'll take it",
+            'add to cart', 'add to order', 'order it', 'get me', 'نعم', 'طيب'
         ]
         
-        # Check if user message contains order intent
-        message_lower = user_message.lower()
-        for keyword in order_keywords:
+        # Weak order signals (wants to order but not confirming yet)
+        weak_order_keywords = [
+            'i want', 'i would like', 'can i get', 'can i have',
+            'أريد', 'أرغب'
+        ]
+        
+        # Check for strong confirmation
+        for keyword in strong_order_keywords:
             if keyword in message_lower:
-                return "order_confirmation"
+                return {
+                    'type': 'order_confirmation',
+                    'confidence': 'high',
+                    'action': 'add_to_cart'
+                }
+        
+        # Check for weak order signal
+        for keyword in weak_order_keywords:
+            if keyword in message_lower:
+                return {
+                    'type': 'order_intent',
+                    'confidence': 'medium',
+                    'action': 'recommend_and_confirm'
+                }
         
         # Check if AI is asking for confirmation
-        confirmation_phrases = ['add', 'order', 'would you like', 'want me to']
+        confirmation_phrases = ['add this', 'add it', 'would you like', 'want me to add', 'shall i add']
         if any(phrase in ai_response.lower() for phrase in confirmation_phrases):
-            return "order_inquiry"
+            return {
+                'type': 'awaiting_confirmation',
+                'confidence': 'medium',
+                'action': 'wait_for_response'
+            }
         
-        return "menu_inquiry"
+        # Just browsing/inquiring
+        return {
+            'type': 'menu_inquiry',
+            'confidence': 'high',
+            'action': 'provide_info'
+        }
     
     def get_conversation_history(self, session_id: str) -> List[Dict]:
         """Get conversation history for a session"""

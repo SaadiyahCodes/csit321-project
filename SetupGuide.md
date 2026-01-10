@@ -31,3 +31,16 @@ Once you run `git pull` , do the following steps:
 1. **Problem: `http://127.0.0.1:8000/` does not show `{"message":"Welcome to Gusto API"}` even after running uvicorn**
 
 Run `netstat -ano | findstr :8000` and kill any process running on the same port.
+
+## Backend Changes (10/1/2026):
+### Migrating to Python Version 3.10.11
+
+- Download 3.10.11 from python.org
+- Delete existing `venv` folder and run `deactivate` in terminal if activated.
+- Create a new venv using python 3.10.11: `py -3.10 -m venv venv`
+- Ensure python version shows 3.10.11 (`python --version`)
+- upgrade pip if needed `python -m pip install --upgrade pip`
+- run `pip install -r requirements1.txt` (latest file)
+
+### **Note**: Whenever you're installing a new library, add the name to `requirements1.txt` manually. 
+You may also additionally run `pip freeze >> requirements.lock` to update the lock file which will have the exact versions listed (for debugging) but should **not** be installed from in your venv.

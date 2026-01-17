@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import engine
 from app.db.base import Base
-from app.routers import auth, admin, menu, restaurant
+from app.routers import auth, admin, menu, restaurant, session, selection
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -22,6 +22,8 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(menu.router)
 app.include_router(restaurant.router)
+app.include_router(session.router)
+app.include_router(selection.router)
 
 @app.get("/")
 def root():

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.schemas.menu import MenuItemResponse, MenuItemCreate, MenuItemUpdate
+from app.schemas.menu import MenuItemResponse
 from app.crud.menu import get_all_menu_items, get_menu_item
 from app.models.menuitems import MenuItem
 

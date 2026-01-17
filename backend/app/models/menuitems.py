@@ -23,5 +23,6 @@ class MenuItem(Base):
     allergens = Column(String(255), nullable=True)
 
     is_available = Column(Boolean, default=True)
+    
     # relationship to restaurant
     restaurant = relationship("Restaurant", back_populates="menu_items")

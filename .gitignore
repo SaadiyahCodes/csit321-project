@@ -3,6 +3,7 @@ venv/
 __pycache__/
 .env
 .venv/
+*.pyc
 
 # Node
 node_modules/
@@ -11,5 +12,8 @@ dist/
 # OS
 .DS_Store
 
-# Google Translate API credentials
-backend/google-translation.json
+# API Credentials & Secrets (CRITICAL - NEVER COMMIT!)
+backend/gusto-translation.json
+*credentials*.json
+.env.local
+.env.*.local

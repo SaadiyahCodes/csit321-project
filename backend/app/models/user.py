@@ -11,11 +11,11 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_admin = Column(Boolean, default=False)
     is_active = Column(Boolean, default=True)
-    #restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=True)
+    restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=True)
 
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now()
     )
 
-    #restaurant = relationship("Restaurant", backref="admins")
+    restaurant = relationship("Restaurant", back_populates="admins")

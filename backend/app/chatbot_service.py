@@ -41,23 +41,31 @@ class ChatbotService:
         
         return f"""You are Gusto AI, a friendly restaurant assistant helping customers order food.
 
-YOUR MENU:
-{menu_text}
+    YOUR MENU:
+    {menu_text}
 
-YOUR ROLE:
-- Help customers find dishes they'll love
-- Answer questions about ingredients, spices, preparation
-- Make personalized recommendations based on preferences
-- Be warm, friendly, and helpful{allergy_warning}
+    YOUR ROLE:
+    - Help customers find dishes they'll love
+    - Answer questions about ingredients, spices, preparation
+    - Make personalized recommendations based on preferences
+    - Be warm, friendly, and helpful{allergy_warning}
 
-IMPORTANT RULES:
-1. ONLY recommend dishes from the menu above
-2. If customer has allergies, NEVER suggest dishes with those allergens
-3. When customer says "yes" or "add it" or "I'll take it", that means they want to ORDER
-4. Be concise - keep responses under 3 sentences unless asked for details
-5. Use emojis sparingly (1-2 per message max)
+    CRITICAL RULES:
+    1. ONLY recommend dishes from the menu above
+    2. If customer has allergies, NEVER suggest dishes with those allergens
+    3. When customer says "yes" or "I'll take it", respond with: "Great choice! I'll add that to your order."
+    4. ⚠️ NEVER say "I have added" or "Added to cart" - You are RECOMMENDING, not adding directly!
+    5. After recommendation, ALWAYS ask: "Would you like me to add this to your order?"
+    6. Be concise - keep responses under 3 sentences unless asked for details
+    7. Use emojis sparingly (1-2 per message max)
 
-Remember: You're helping someone choose their meal. Make it delightful! 🍽️"""
+    CONVERSATION FLOW:
+    - Customer asks about food → Recommend dishes
+    - Customer shows interest → Confirm: "Would you like to add the [dish] to your order?"
+    - Customer confirms → Say: "Perfect! Let me add that for you." (backend will handle actual adding)
+    - Continue conversation naturally
+
+    Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself! 🍽️"""
     
     def chat(
         self, 
@@ -84,18 +92,24 @@ Remember: You're helping someone choose their meal. Make it delightful! 🍽️"
             # Build conversation context
             system_prompt = self.get_system_prompt(menu_items, user_allergies)
 
-            # Use RAG to find relevant menu items based on message
+            extracted = self.extract_keywords_and_preferences(message)
+
+            # Merge allergies (user profile + message-based)
+            all_allergies = list(set((user_allergies or []) + extracted.get("allergies", [])))
+
+            # Use extracted keywords for RAG
             rag = MenuRAG(menu_items)
 
-            # Extract keywords from message
-            keywords = message.lower().split()
-            relevant_items = rag.search_by_keywords(keywords, exclude_allergens=user_allergies)
+            if extracted.get("keywords"):
+                relevant_items = rag.search_by_keywords(
+                    keywords=extracted["keywords"],
+                    exclude_allergens=all_allergies
+                )
 
-            # If we found relevant items, enhance the prompt
-            if relevant_items[:3]:  # Top 3 matches
-                system_prompt += f"\n\n🎯 MOST RELEVANT DISHES FOR THIS QUERY:\n"
-                system_prompt += rag.format_items_for_ai(relevant_items[:3])
-                system_prompt += "\n\nFocus on recommending these dishes first!"
+                if relevant_items[:3]:
+                    system_prompt += f"\n\n🎯 DISHES MATCHING: {', '.join(extracted['keywords'])}\n"
+                    system_prompt += rag.format_items_for_ai(relevant_items[:3])
+                    system_prompt += "\n\nPrioritize recommending these dishes."
             
             # Create full conversation for AI
             full_context = system_prompt + "\n\n"
@@ -151,61 +165,120 @@ Remember: You're helping someone choose their meal. Make it delightful! 🍽️"
         """Enhanced intent detection with item extraction"""
         
         message_lower = user_message.lower()
-        
-        # Strong order confirmation keywords
-        strong_order_keywords = [
-            'yes', 'yeah', 'sure', 'ok', 'okay', 'add it', "i'll take it",
-            'add to cart', 'add to order', 'order it', 'get me', 'نعم', 'طيب'
-        ]
-        
-        # Weak order signals (wants to order but not confirming yet)
-        weak_order_keywords = [
-            'i want', 'i would like', 'can i get', 'can i have',
-            'أريد', 'أرغب'
-        ]
-        
-        # Check for strong confirmation
-        for keyword in strong_order_keywords:
-            if keyword in message_lower:
+        response_lower = ai_response.lower()
+    
+        # Customer explicitly confirms order
+        if any(word in message_lower for word in ['yes', 'sure', 'ok', 'add it', "i'll take it"]):
+            # Check if AI mentioned a specific dish in previous response
+            if 'recommend' in response_lower or any(item['name'].lower() in response_lower for item in self.last_recommended_items):
                 return {
                     'type': 'order_confirmation',
                     'confidence': 'high',
-                    'action': 'add_to_cart'
+                    'action': 'add_to_cart',
+                    'should_add': True  # ← FLAG to actually add!
                 }
         
-        # Check for weak order signal
-        for keyword in weak_order_keywords:
-            if keyword in message_lower:
-                return {
-                    'type': 'order_intent',
-                    'confidence': 'medium',
-                    'action': 'recommend_and_confirm'
-                }
-        
-        # Check if AI is asking for confirmation
-        confirmation_phrases = ['add this', 'add it', 'would you like', 'want me to add', 'shall i add']
-        if any(phrase in ai_response.lower() for phrase in confirmation_phrases):
+        # Customer expresses interest ("I want...")
+        if any(word in message_lower for word in ['i want', 'i would like', 'can i get']):
             return {
-                'type': 'awaiting_confirmation',
+                'type': 'order_intent',
                 'confidence': 'medium',
-                'action': 'wait_for_response'
+                'action': 'recommend_and_ask',  # ← Changed!
+                'should_add': False  # ← Don't add yet!
             }
         
-        # Just browsing/inquiring
         return {
             'type': 'menu_inquiry',
             'confidence': 'high',
-            'action': 'provide_info'
+            'action': 'provide_info',
+            'should_add': False
         }
     
-    def get_conversation_history(self, session_id: str) -> List[Dict]:
-        """Get conversation history for a session"""
-        return self.conversations.get(session_id, [])
+    def get_conversation_summary(self, session_id: str, menu_items: List[Dict]) -> str:
+        """Generate order summary from conversation"""
+        
+        history = self.conversations.get(session_id, [])
+        
+        # Extract confirmed orders from conversation
+        confirmed_items = []
+        
+        for msg in history:
+            if msg.get('intent', {}).get('should_add'):
+                # Find which item was discussed
+                for item in menu_items:
+                    if item['name'].lower() in msg['user'].lower() or item['name'].lower() in msg['assistant'].lower():
+                        confirmed_items.append(item)
+                        break
+        
+        if not confirmed_items:
+            return "You haven't confirmed any items yet. What would you like to order?"
+        
+        # Format summary
+        summary = "📋 **Order Summary from our conversation:**\n\n"
+        total = 0
+        
+        for item in confirmed_items:
+            summary += f"• {item['name']} - ${item['price']}\n"
+            total += item['price']
+        
+        summary += f"\n💰 **Total: ${total:.2f}**\n\n"
+        summary += "Would you like to proceed with this order?"
+        
+        return summary
     
     def clear_conversation(self, session_id: str):
         """Clear conversation history"""
         if session_id in self.conversations:
             del self.conversations[session_id]
+
+
+
+    def extract_keywords_and_preferences(self, message: str) -> Dict:
+        """
+        Use AI to extract keywords, allergies, and preferences from natural language
+        """
+        
+        extraction_prompt = f"""Analyze this customer message and extract:
+    1. Food-related keywords (ingredients, cooking styles, flavors)
+    2. Any mentioned allergies or dietary restrictions
+    3. Price preferences if mentioned
+    4. Category preferences (appetizer, main, dessert, drink)
+
+    Customer message: "{message}"
+
+    Respond ONLY with JSON:
+    {{
+        "keywords": ["list", "of", "keywords"],
+        "allergies": ["list", "of", "allergens"],
+        "max_price": number or null,
+        "category": "category" or null,
+        "dietary": ["vegetarian", "vegan", etc] or []
+    }}"""
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=extraction_prompt
+            )
+            
+            # Parse AI response
+            import json
+            import re
+            
+            # Extract JSON from response
+            json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+            if json_match:
+                extracted = json.loads(json_match.group())
+                return extracted
+            
+            return {"keywords": [], "allergies": [], "max_price": None, "category": None}
+            
+        except Exception as e:
+            print(f"Extraction error: {e}")
+            # Fallback: simple keyword extraction
+            words = message.lower().split()
+            food_keywords = [w for w in words if len(w) > 3]  # Simple heuristic
+            return {"keywords": food_keywords, "allergies": [], "max_price": None}
 
 # Global instance
 chatbot_service = ChatbotService()

@@ -12,6 +12,17 @@ AI-powered multilingual restaurant chatbot with voice support, allergen safety, 
 ✅ Order management
 ✅ Conversation memory
 
+### Quick Start
+```bash
+# Set API key
+echo "GEMINI_API_KEY=your_key" >> .env
+
+# Test chatbot
+curl -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message":"hello","language":"en"}'
+```
+
 ## Endpoints
 
 ### Chat

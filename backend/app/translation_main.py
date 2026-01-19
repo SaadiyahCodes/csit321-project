@@ -534,3 +534,15 @@ async def voice_chat(request: VoiceChatRequest):
             "traceback": traceback.format_exc(),
             "success": False
         }
+    
+
+@app.get("/api/chat/{session_id}/order-summary")
+def get_chat_order_summary(session_id: str):
+    """Get order summary from chatbot conversation"""
+    menu_items = get_mock_menu()
+    summary = chatbot_service.get_conversation_summary(session_id, menu_items)
+    
+    return {
+        "session_id": session_id,
+        "summary": summary
+    }

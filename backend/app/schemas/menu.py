@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 from datetime import datetime
+from typing import Optional, List
 
 # Enum for menu categories (allowed categories)
 class MenuCategory(str, Enum):
@@ -15,7 +16,8 @@ class MenuItemBase(BaseModel):
     description: str = Field(default=None, max_length=255)
     price: float = Field (..., ge=0)
     category: MenuCategory
-    allergens: str | None = None #optional
+    allergens: Optional[List[str]] = []
+    ingredients: Optional[str] = None
     is_available: bool = True
     image_url: str | None = None
     ar_model_url: str | None = None
@@ -30,7 +32,8 @@ class MenuItemUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=255)
     price: float | None = Field(default=None, ge=0)
     category: MenuCategory | None = None
-    allergens: str | None = None
+    allergens: Optional[List[str]] = None
+    ingredients: Optional[str] = None
     is_available: bool | None = None
     image_url: str | None = None
     ar_model_url: str | None = None

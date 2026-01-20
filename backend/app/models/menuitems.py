@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, Text, ForeignKey, Boolean, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
@@ -20,8 +21,8 @@ class MenuItem(Base):
     image_url = Column(String(500), nullable=True)
     ar_model_url = Column(String(500), nullable=True)
 
-    allergens = Column(String(255), nullable=True)
-
+    allergens = Column(JSONB, nullable=True)
+    ingredients = Column(Text, nullable=True)
     is_available = Column(Boolean, default=True)
     
     # relationship to restaurant

@@ -1,9 +1,14 @@
+#app/services/chatbot_service.py
 from google import genai
 import os
 from typing import Dict, List
 from datetime import datetime
 from dotenv import load_dotenv
-from app.menu_rag import MenuRAG
+from sqlalchemy.orm import Session
+from app.models.menuitems import MenuItem
+from app.services.menu_rag import MenuRAG
+import json
+import re
 
 load_dotenv()
 
@@ -24,6 +29,26 @@ class ChatbotService:
         
         # Conversation memory
         self.conversations = {}
+
+    def get_menu_items_dict(self, db: Session, restaurant_id: int) -> List[Dict]:
+        """Fetch menu items from database and convert to dict format"""
+        menu_items = db.query(MenuItem).filter(
+            MenuItem.restaurant_id == restaurant_id
+        ).all()
+        
+        # Convert SQLAlchemy models to dicts for AI
+        return [
+            {
+                "id": item.id,
+                "name": item.name,
+                "description": item.description,
+                "price": float(item.price),
+                "category": item.category or "other",
+                "allergens": item.allergens if item.allergens else [],
+                "ingredients": item.ingredients or ""
+            }
+            for item in menu_items
+        ]
     
     def get_system_prompt(self, menu_items: List[Dict], user_allergies: List[str] = None) -> str:
         """Create system prompt with menu context"""
@@ -60,21 +85,22 @@ class ChatbotService:
     7. Use emojis sparingly (1-2 per message max)
 
     CONVERSATION FLOW:
-    - Customer asks about food → Recommend dishes
+    - Customer asks about food → Recommend dishes from the menu
     - Customer shows interest → Confirm: "Would you like to add the [dish] to your order?"
     - Customer confirms → Say: "Perfect! Let me add that for you." (backend will handle actual adding)
     - Continue conversation naturally
 
-    Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself! 🍽️"""
+    Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself!"""
     
     def chat(
         self, 
         message: str, 
         session_id: str,
-        menu_items: List[Dict],
+        db: Session,
+        restaurant_id: int,
         user_allergies: List[str] = None
     ) -> Dict:
-        """Have a conversation with the customer"""
+        """Have a conversation with the customer using real database + RAG"""
         
         if not self.enabled:
             return {
@@ -83,6 +109,15 @@ class ChatbotService:
             }
         
         try:
+            # Get real menu items from database
+            menu_items = self.get_menu_items_dict(db, restaurant_id)
+            
+            if not menu_items:
+                return {
+                    "response": "Sorry, this restaurant's menu is not available right now.",
+                    "error": True
+                }
+            
             # Get or create conversation history
             if session_id not in self.conversations:
                 self.conversations[session_id] = []
@@ -129,13 +164,14 @@ class ChatbotService:
             ai_message = response.text.strip()
             
             # Detect intent
-            intent = self._detect_intent(message, ai_message)
+            intent = self._detect_intent(message, ai_message, menu_items)
             
             # Save to history
             history.append({
                 "user": message,
                 "assistant": ai_message,
                 "intent": intent,
+                "extracted_preferences": extracted,
                 "timestamp": datetime.utcnow().isoformat()
             })
             
@@ -147,6 +183,7 @@ class ChatbotService:
                 "response": ai_message,
                 "intent": intent,
                 "session_id": session_id,
+                "extracted_preferences": extracted,
                 "error": False
             }
             
@@ -161,39 +198,70 @@ class ChatbotService:
                 "error_message": str(e)
             }
     
-    def _detect_intent(self, user_message: str, ai_response: str) -> Dict:
-        """Enhanced intent detection with item extraction"""
+    def _detect_intent(self, user_message: str, ai_response: str, menu_items: List[Dict]) -> Dict:
+        """Detect user intent and extract menu items mentioned"""
         
         message_lower = user_message.lower()
         response_lower = ai_response.lower()
-    
-        # Customer explicitly confirms order
-        if any(word in message_lower for word in ['yes', 'sure', 'ok', 'add it', "i'll take it"]):
-            # Check if AI mentioned a specific dish in previous response
-            if 'recommend' in response_lower or any(item['name'].lower() in response_lower for item in self.last_recommended_items):
-                return {
-                    'type': 'order_confirmation',
-                    'confidence': 'high',
-                    'action': 'add_to_cart',
-                    'should_add': True  # ← FLAG to actually add!
-                }
         
-        # Customer expresses interest ("I want...")
-        if any(word in message_lower for word in ['i want', 'i would like', 'can i get']):
+        # Find items mentioned in AI's CURRENT response
+        ai_mentioned_items = []
+        for item in menu_items:
+            if item['name'].lower() in response_lower:
+                ai_mentioned_items.append({
+                    "id": item['id'],
+                    "name": item['name'],
+                    "price": item['price']
+                })
+        
+        # Find items mentioned in USER's message
+        user_mentioned_items = []
+        for item in menu_items:
+            if item['name'].lower() in message_lower:
+                user_mentioned_items.append({
+                    "id": item['id'],
+                    "name": item['name'],
+                    "price": item['price']
+                })
+        
+        # Customer explicitly confirms with "yes" + item name
+        if any(word in message_lower for word in ['yes', 'sure', 'ok', 'add it', "i'll take it", 'sounds good', 'perfect']):
+            # If user says "yes add french fries", use items from their message
+            items_to_add = user_mentioned_items if user_mentioned_items else ai_mentioned_items
+            
+            return {
+                'type': 'order_confirmation',
+                'confidence': 'high',
+                'action': 'add_to_cart',
+                'should_add': True,
+                'items': items_to_add
+            }
+        
+        # Customer expresses interest with SPECIFIC item name
+        if any(word in message_lower for word in ['i want', 'i would like', 'can i get', 'get me', "i'll have"]):
+            # Use items mentioned in user's message
             return {
                 'type': 'order_intent',
                 'confidence': 'medium',
-                'action': 'recommend_and_ask',  # ← Changed!
-                'should_add': False  # ← Don't add yet!
+                'action': 'recommend_and_ask',
+                'should_add': True if user_mentioned_items else False,
+                'items': user_mentioned_items
             }
         
+        # Just asking questions
         return {
             'type': 'menu_inquiry',
             'confidence': 'high',
             'action': 'provide_info',
-            'should_add': False
+            'should_add': False,
+            'items': []
         }
     
+    def get_conversation_history(self, session_id: str) -> List[Dict]:
+        """Get conversation history for a session"""
+        return self.conversations.get(session_id, [])
+    
+
     def get_conversation_summary(self, session_id: str, menu_items: List[Dict]) -> str:
         """Generate order summary from conversation"""
         
@@ -261,24 +329,21 @@ class ChatbotService:
                 contents=extraction_prompt
             )
             
-            # Parse AI response
-            import json
-            import re
-            
+            # Parse AI response         
             # Extract JSON from response
             json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
             if json_match:
                 extracted = json.loads(json_match.group())
                 return extracted
             
-            return {"keywords": [], "allergies": [], "max_price": None, "category": None}
+            return {"keywords": [], "allergies": [], "max_price": None, "category": None, "dietary": []}
             
         except Exception as e:
             print(f"Extraction error: {e}")
             # Fallback: simple keyword extraction
             words = message.lower().split()
             food_keywords = [w for w in words if len(w) > 3]  # Simple heuristic
-            return {"keywords": food_keywords, "allergies": [], "max_price": None}
+            return {"keywords": food_keywords, "allergies": [], "max_price": None, "category": None, "dietary": []}
 
 # Global instance
 chatbot_service = ChatbotService()

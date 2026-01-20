@@ -3,19 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from dotenv import load_dotenv
-from app.chatbot_service import chatbot_service
-from app.mock_data import get_mock_menu
+from backend.app.services.chatbot_service import chatbot_service
+from backend.temp.mock_data import get_mock_menu
 import uuid
-from app.menu_rag import MenuRAG
-from app.order_service import order_service
-from app.voice_service import voice_service
+from backend.app.services.menu_rag import MenuRAG
+from backend.app.services.order_service import order_service
+from backend.app.services.voice_service import voice_service
 from fastapi import File, UploadFile
 import base64
 
 load_dotenv()
 
-from app.translation_service import translation_service
-from app.mock_data import get_mock_menu
+from backend.app.services.translation_service import translation_service
+from backend.temp.mock_data import get_mock_menu
 
 app = FastAPI(
     title="Gusto API",

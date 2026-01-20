@@ -17,6 +17,10 @@ Once you run `git pull` , do the following steps:
     For Windows: `venv\Scripts\activate` <br>
     For MacOS/Linux: `source venv/bin/activate`
     - Install dependencies `pip install -r requirements.txt`
+    - Install `ffmpeg`
+        - Windows: `winget install ffmpeg`
+        - Linux: `sudo apt-get install ffmpeg`
+        - Mac: `brew install ffmpeg`
     - Run backend server `uvicorn app.main:app --reload`
 - in `\frontend`: <br>
     We are using React + Vite

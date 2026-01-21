@@ -1,15 +1,19 @@
+//src/routes/customer/DishPreviewPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
+import { useSession } from "../../context/SessionContext";
 import api from "../../api";
 
 export default function DishPreviewPage() {
   const { restaurantId, dishId } = useParams();
   const navigate = useNavigate();
+  const { sessionId, selectionId, loading: sessionLoading } = useSession();
   const [activeNav, setActiveNav] = useState("menu");
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(()=> {
     fetchDishDetails();
@@ -31,7 +35,35 @@ export default function DishPreviewPage() {
     navigate(`/restaurant/${restaurantId}/menu`);
   };
 
-  if (loading) {
+  const handleCustomize = () => {
+    navigate(`/restaurant/${restaurantId}/customize/${dishId}`);
+  };
+
+  const handleQuickOrder = async () => {
+    if (!selectionId || !item) return;
+
+    setAddingToCart(true);
+    try {
+      await api.post(
+        `/api/selections/${selectionId}/items?session_id=${sessionId}`,
+        {
+          menu_item_id: item.id,
+          quantity: 1,
+          notes: null
+        }
+      );
+
+      alert("Item added to cart!");
+      navigate(`/restaurant/${restaurantId}/cart`);
+    } catch (err) {
+      console.error("Error adding to cart:", err);
+      alert("Failed to add item to cart");
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  if (loading || sessionLoading) {
     return (
       <div className="min-h-screen bg-yellow-300 flex items-center justify-center">
         <div className="bg-white rounded-3xl p-6 text-center">
@@ -138,7 +170,9 @@ export default function DishPreviewPage() {
             <div>
               <p className="font-extrabold">Allergens:</p>
               <p className="text-gray-700 leading-relaxed">
-                {item.allergens || "None listed"}
+                {item.allergens && item.allergens.length > 0
+                  ? item.allergens.join(", ")
+                  : "None listed"}
               </p>
             </div>
 
@@ -162,19 +196,19 @@ export default function DishPreviewPage() {
 
           {/* Buttons */}
           <div className="mt-7 flex flex-col gap-3 items-center">
-            <button 
-              className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99]"
+            <button
+              onClick={handleCustomize}
+              className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!item.is_available}
-              style={{ opacity: item.is_available ? 1 : 0.5 }}
             >
               Customize
             </button>
             <button 
-              className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99]"
-              disabled={!item.is_available}
-              style={{ opacity: item.is_available ? 1 : 0.5 }}
+              onClick={handleQuickOrder}
+              className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!item.is_available || addingToCart}
             >
-              Place Order
+              {addingToCart ? "Adding..." : "Place Order"}
             </button>
           </div>
         </div>

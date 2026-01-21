@@ -1,13 +1,16 @@
+// src/routes/customer/LandingPage.jsx
 import { useState, useEffect } from "react";
-import { Search, Home, ShoppingCart, Heart, Clipboard, Mic } from "lucide-react";
+import { Search } from "lucide-react";
 import RestaurantCard from "../../components/RestaurantCard";
+import BottomNav from "../../components/BottomNav";
 import api from "../../api";
 
-export default function GustoHome() {
+export default function LandingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeNav, setActiveNav] = useState("home");
 
   useEffect(() => {
     fetchRestaurants();
@@ -42,7 +45,8 @@ export default function GustoHome() {
       minHeight: '100vh', 
       backgroundColor: '#f3f4f6',
       display: 'flex',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      paddingBottom: '80px' // Add space for fixed bottom nav
     }}>
       <div style={{ width: '100%', maxWidth: '1200px', padding: '0 16px' }}>
         {/* HEADER */}
@@ -113,28 +117,12 @@ export default function GustoHome() {
               ))}
             </div>
           </div>
-
-          {/* BOTTOM NAV */}
-          <nav style={{
-            background: 'linear-gradient(to right, #f97316, #ea580c)',
-            borderRadius: '16px',
-            padding: '12px 24px',
-            maxWidth: '500px',
-            margin: '0 auto 24px'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-around',
-              color: 'white'
-            }}>
-              <Home size={20} />
-              <ShoppingCart size={20} />
-              <Heart size={20} />
-              <Clipboard size={20} />
-              <Mic size={20} />
-            </div>
-          </nav>
         </main>
+      </div>
+
+      {/* BOTTOM NAV - Fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0">
+        <BottomNav active={activeNav} onChange={setActiveNav} />
       </div>
     </div>
   );

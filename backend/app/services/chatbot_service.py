@@ -164,7 +164,7 @@ class ChatbotService:
             ai_message = response.text.strip()
             
             # Detect intent
-            intent = self._detect_intent(message, ai_message, menu_items)
+            intent = self._detect_intent(message, ai_message, menu_items, history)
             
             # Save to history
             history.append({
@@ -198,7 +198,7 @@ class ChatbotService:
                 "error_message": str(e)
             }
     
-    def _detect_intent(self, user_message: str, ai_response: str, menu_items: List[Dict]) -> Dict:
+    def _detect_intent(self, user_message: str, ai_response: str, menu_items: List[Dict], history: List[Dict] = None) -> Dict:
         """Detect user intent and extract menu items mentioned"""
         
         message_lower = user_message.lower()
@@ -224,10 +224,31 @@ class ChatbotService:
                     "price": item['price']
                 })
         
-        # Customer explicitly confirms with "yes" + item name
+        # Customer explicitly confirms with "yes", "sure", etc.
         if any(word in message_lower for word in ['yes', 'sure', 'ok', 'add it', "i'll take it", 'sounds good', 'perfect']):
-            # If user says "yes add french fries", use items from their message
-            items_to_add = user_mentioned_items if user_mentioned_items else ai_mentioned_items
+            # Priority 1: If user mentions specific item ("yes add french fries")
+            if user_mentioned_items:
+                items_to_add = user_mentioned_items
+            # Priority 2: Check PREVIOUS AI message for recommendations
+            elif history:
+                # Get the last AI message (where recommendation was made)
+                previous_ai_message = history[-1].get('assistant', '').lower() if history else ''
+                
+                # Find items mentioned in PREVIOUS AI message
+                previous_mentioned_items = []
+                for item in menu_items:
+                    if item['name'].lower() in previous_ai_message:
+                        previous_mentioned_items.append({
+                            "id": item['id'],
+                            "name": item['name'],
+                            "price": item['price']
+                        })
+                
+                # Use FIRST item from previous message (primary recommendation)
+                items_to_add = [previous_mentioned_items[0]] if previous_mentioned_items else []
+            # Priority 3: Fallback to current AI message
+            else:
+                items_to_add = [ai_mentioned_items[0]] if ai_mentioned_items else []
             
             return {
                 'type': 'order_confirmation',

@@ -10,6 +10,7 @@ from app.schemas.selection import(
 from app.crud import selection as selection_crud
 from app.crud import session as session_crud
 from app.services import qr_service
+from app.models.selection import SelectionStatus
 
 router = APIRouter(prefix="/api/selections", tags=["selections"])
 
@@ -92,7 +93,9 @@ def delete_selection_item(item_id: int, session_id: str, db: Session = Depends(g
     db.refresh(selection)
     return selection
 
-# Finalize selection and get QR code
+
+#Finalize selections
+
 @router.post("/{selection_id}/finalize", response_model=SelectionFinalizeResponse)
 def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get_db)):
     selection = selection_crud.get_selection_by_id(db, selection_id)
@@ -104,13 +107,29 @@ def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # Generate QR
+    # Generate comprehensive response with all items
     response = SelectionResponse.model_validate(selection)
-    qr_code = qr_service.generate_qr_code({
+    
+    # Build detailed order data for QR code
+    qr_payload = {
         "selection_id": selection.id,
         "restaurant_id": selection.restaurant_id,
-        "total": response.total_price
-    })
+        "total_price": response.total_price,
+        "item_count": response.item_count,
+        "finalized_at": selection.finalized_at.isoformat(),
+        "items": [
+            {
+                "name": item.menu_item.name,
+                "quantity": item.quantity,
+                "price": item.menu_item.price,
+                "item_total": item.item_total,
+                "notes": item.notes
+            }
+            for item in response.items
+        ]
+    }
+    
+    qr_code = qr_service.generate_qr_code(qr_payload)
     
     return SelectionFinalizeResponse(
         selection_id=selection.id,
@@ -119,3 +138,22 @@ def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get
         item_count=response.item_count,
         finalized_at=selection.finalized_at
     )
+
+
+#view selections (for qr code)
+# app/routers/selection.py (add this new endpoint)
+
+@router.get("/view/{selection_id}", response_model=SelectionResponse)
+def view_order_details(selection_id: int, db: Session = Depends(get_db)):
+    """
+    Public endpoint for waiters to view order details
+    No session_id required - anyone can view finalized orders
+    """
+    selection = selection_crud.get_selection_by_id(db, selection_id)
+    if not selection:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    if selection.status != SelectionStatus.FINALIZED:
+        raise HTTPException(status_code=400, detail="Order not finalized yet")
+    
+    return selection

@@ -3,9 +3,13 @@ import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import RestaurantCard from "../../components/RestaurantCard";
 import BottomNav from "../../components/BottomNav";
+import LanguageSelector from "../../components/LanguageSelector";
+import TranslatedText from "../../components/TranslatedText";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 
 export default function LandingPage() {
+  const { tSync } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +50,7 @@ export default function LandingPage() {
       backgroundColor: '#f3f4f6',
       display: 'flex',
       justifyContent: 'center',
-      paddingBottom: '80px' // Add space for fixed bottom nav
+      paddingBottom: '80px'
     }}>
       <div style={{ width: '100%', maxWidth: '1200px', padding: '0 16px' }}>
         {/* HEADER */}
@@ -56,6 +60,11 @@ export default function LandingPage() {
           padding: '24px',
           marginTop: '16px'
         }}>
+          {/* Language Selector - top right */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+            <LanguageSelector variant="compact" />
+          </div>
+
           <h1 style={{
             color: 'white',
             fontSize: '28px',
@@ -63,7 +72,7 @@ export default function LandingPage() {
             marginBottom: '24px',
             textAlign: 'center'
           }}>
-            Welcome To Gusto
+            <TranslatedText>Welcome To Gusto</TranslatedText>
           </h1>
 
           <div style={{
@@ -84,7 +93,7 @@ export default function LandingPage() {
                 fontSize: '14px',
                 border: 'none'
               }}
-              placeholder="Search Restaurants"
+              placeholder={tSync("Search Restaurants")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -104,7 +113,7 @@ export default function LandingPage() {
               fontSize: '20px',
               marginBottom: '20px'
             }}>
-              All Restaurants
+              <TranslatedText>All Restaurants</TranslatedText>
             </h2>
 
             <div style={{
@@ -120,7 +129,7 @@ export default function LandingPage() {
         </main>
       </div>
 
-      {/* BOTTOM NAV - Fixed at bottom */}
+      {/* BOTTOM NAV */}
       <div className="fixed bottom-0 left-0 right-0">
         <BottomNav active={activeNav} onChange={setActiveNav} />
       </div>

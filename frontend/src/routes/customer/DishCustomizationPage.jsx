@@ -2,13 +2,16 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
+import TranslatedText from "../../components/TranslatedText";
 import { useSession } from "../../context/SessionContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 
 export default function DishCustomizationPage() {
   const navigate = useNavigate();
   const { restaurantId, dishId } = useParams();
   const { sessionId, selectionId, loading: sessionLoading } = useSession();
+  const { language, tSync } = useLanguage();
   const [activeNav, setActiveNav] = useState("menu");
 
   const [dish, setDish] = useState(null);
@@ -19,16 +22,40 @@ export default function DishCustomizationPage() {
 
   useEffect(() => {
     fetchDish();
-  }, [dishId]);
+  }, [dishId, language]);
 
   const fetchDish = async () => {
+    setLoading(true);
     try {
       const response = await api.get(`/api/menu/${dishId}`);
-      setDish(response.data);
+      const dishData = response.data;
+
+      // If not English, translate the dish
+      if (language !== 'en') {
+        const nameResult = await api.post('/api/translate/text', {
+          text: dishData.name,
+          target_lang: language,
+          source_lang: 'en'
+        });
+        const descResult = await api.post('/api/translate/text', {
+          text: dishData.description || '',
+          target_lang: language,
+          source_lang: 'en'
+        });
+
+        if (nameResult.data.success) {
+          dishData.name = nameResult.data.translated_text;
+        }
+        if (descResult.data.success && dishData.description) {
+          dishData.description = descResult.data.translated_text;
+        }
+      }
+
+      setDish(dishData);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching dish:", err);
-      alert("Dish not found");
+      alert(tSync("Dish not found"));
       navigate(`/restaurant/${restaurantId}/menu`);
     }
   };
@@ -47,11 +74,11 @@ export default function DishCustomizationPage() {
         }
       );
 
-      alert("Item added to cart!");
+      alert(tSync("Item added to cart!"));
       navigate(`/restaurant/${restaurantId}/cart`);
     } catch (err) {
       console.error("Error adding to cart:", err);
-      alert(err.response?.data?.detail || "Failed to add item to cart");
+      alert(err.response?.data?.detail || tSync("Failed to add item to cart"));
     } finally {
       setAddingToCart(false);
     }
@@ -60,7 +87,9 @@ export default function DishCustomizationPage() {
   if (loading || sessionLoading || !dish) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="font-semibold">Loading...</p>
+        <p className="font-semibold">
+          <TranslatedText>Loading...</TranslatedText>
+        </p>
       </div>
     );
   }
@@ -105,7 +134,7 @@ export default function DishCustomizationPage() {
 
         {dish.allergens && dish.allergens.length > 0 && (
           <p className="mt-2 text-gray-700 text-sm">
-            <strong>Allergens:</strong> {dish.allergens.join(", ")}
+            <strong><TranslatedText>Allergens:</TranslatedText></strong> {dish.allergens.join(", ")}
           </p>
         )}
       </div>
@@ -130,12 +159,12 @@ export default function DishCustomizationPage() {
       {/* Special instructions */}
       <div className="px-4 mt-6">
         <label className="block text-sm font-bold mb-2">
-          Special Instructions (Optional)
+          <TranslatedText>Special Instructions (Optional)</TranslatedText>
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g., No onions, extra spicy..."
+          placeholder={tSync("e.g., No onions, extra spicy...")}
           className="w-full rounded-2xl p-3 text-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"
           rows={3}
         />
@@ -152,7 +181,9 @@ export default function DishCustomizationPage() {
             disabled={addingToCart}
             className="bg-orange-600 text-white px-6 py-2 rounded-full font-bold disabled:opacity-50"
           >
-            {addingToCart ? "Adding..." : "Add to Cart"}
+            <TranslatedText>
+              {addingToCart ? "Adding..." : "Add to Cart"}
+            </TranslatedText>
           </button>
         </div>
       </div>

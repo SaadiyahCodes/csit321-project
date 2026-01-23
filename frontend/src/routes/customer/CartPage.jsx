@@ -3,12 +3,15 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus } from "lucide-react";
 import BottomNav from "../../components/BottomNav";
+import TranslatedText from "../../components/TranslatedText";
 import { useSession } from "../../context/SessionContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 
 export default function CartPage() {
   const navigate = useNavigate();
   const { sessionId, selectionId, restaurantId, loading: sessionLoading } = useSession();
+  const { language, tSync } = useLanguage();
   const [activeNav, setActiveNav] = useState("cart");
   
   const [selection, setSelection] = useState(null);
@@ -19,14 +22,33 @@ export default function CartPage() {
     if (selectionId && sessionId) {
       fetchCart();
     }
-  }, [selectionId, sessionId]);
+  }, [selectionId, sessionId, language]);
 
   const fetchCart = async () => {
+    setLoading(true);
     try {
       const response = await api.get(
         `/api/selections/${selectionId}?session_id=${sessionId}`
       );
-      setSelection(response.data);
+      const cartData = response.data;
+
+      // If not English, translate menu item names and descriptions
+      if (language !== 'en' && cartData.items) {
+        for (let item of cartData.items) {
+          if (item.menu_item.name) {
+            const nameResult = await api.post('/api/translate/text', {
+              text: item.menu_item.name,
+              target_lang: language,
+              source_lang: 'en'
+            });
+            if (nameResult.data.success) {
+              item.menu_item.name = nameResult.data.translated_text;
+            }
+          }
+        }
+      }
+
+      setSelection(cartData);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching cart:", err);
@@ -39,12 +61,10 @@ export default function CartPage() {
     
     try {
       if (newQuantity === 0) {
-        // Delete item
         await api.delete(
           `/api/selections/items/${itemId}?session_id=${sessionId}`
         );
       } else {
-        // Update quantity
         await api.put(
           `/api/selections/items/${itemId}?session_id=${sessionId}`,
           { quantity: newQuantity }
@@ -54,14 +74,14 @@ export default function CartPage() {
       await fetchCart();
     } catch (err) {
       console.error("Error updating item:", err);
-      alert("Failed to update item");
+      alert(tSync("Failed to update item"));
     } finally {
       setUpdating(prev => ({ ...prev, [itemId]: false }));
     }
   };
 
   const removeItem = async (itemId) => {
-    if (!confirm("Remove this item from cart?")) return;
+    if (!confirm(tSync("Remove this item from cart?"))) return;
     
     setUpdating(prev => ({ ...prev, [itemId]: true }));
     
@@ -72,7 +92,7 @@ export default function CartPage() {
       await fetchCart();
     } catch (err) {
       console.error("Error removing item:", err);
-      alert("Failed to remove item");
+      alert(tSync("Failed to remove item"));
     } finally {
       setUpdating(prev => ({ ...prev, [itemId]: false }));
     }
@@ -85,7 +105,9 @@ export default function CartPage() {
   if (loading || sessionLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="font-semibold">Loading cart...</p>
+        <p className="font-semibold">
+          <TranslatedText>Loading cart...</TranslatedText>
+        </p>
       </div>
     );
   }
@@ -94,13 +116,17 @@ export default function CartPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Cart is Empty</h2>
-          <p className="text-gray-600 mb-6">Add some delicious items to get started!</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <TranslatedText>Your Cart is Empty</TranslatedText>
+          </h2>
+          <p className="text-gray-600 mb-6">
+            <TranslatedText>Add some delicious items to get started!</TranslatedText>
+          </p>
           <button
             onClick={() => navigate(`/restaurant/${restaurantId}/menu`)}
             className="bg-orange-600 text-white px-6 py-3 rounded-full font-bold"
           >
-            Browse Menu
+            <TranslatedText>Browse Menu</TranslatedText>
           </button>
         </div>
         <div className="fixed bottom-0 left-0 right-0">
@@ -122,7 +148,9 @@ export default function CartPage() {
             >
               ←
             </button>
-            <h1 className="text-xl font-extrabold">Your Cart</h1>
+            <h1 className="text-xl font-extrabold">
+              <TranslatedText>Your Cart</TranslatedText>
+            </h1>
           </div>
         </div>
       </div>
@@ -151,7 +179,7 @@ export default function CartPage() {
                 
                 {item.notes && (
                   <p className="text-xs text-gray-500 mt-1 italic">
-                    Note: {item.notes}
+                    {tSync("Note")}: {item.notes}
                   </p>
                 )}
 
@@ -197,16 +225,22 @@ export default function CartPage() {
         {/* Summary */}
         <div className="bg-white rounded-3xl shadow-sm p-6 mt-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">Subtotal</span>
+            <span className="text-gray-600">
+              <TranslatedText>Subtotal</TranslatedText>
+            </span>
             <span className="font-semibold">${selection.total_price.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">Items</span>
+            <span className="text-gray-600">
+              <TranslatedText>Items</TranslatedText>
+            </span>
             <span className="font-semibold">{selection.item_count}</span>
           </div>
           <div className="border-t pt-4 mt-4">
             <div className="flex justify-between items-center">
-              <span className="text-lg font-extrabold">Total</span>
+              <span className="text-lg font-extrabold">
+                <TranslatedText>Total</TranslatedText>
+              </span>
               <span className="text-2xl font-extrabold text-orange-600">
                 ${selection.total_price.toFixed(2)}
               </span>
@@ -222,7 +256,7 @@ export default function CartPage() {
             onClick={handleCheckout}
             className="w-full bg-orange-600 text-white py-4 rounded-full font-extrabold text-lg"
           >
-            Proceed to Checkout
+            <TranslatedText>Proceed to Checkout</TranslatedText>
           </button>
         </div>
       </div>

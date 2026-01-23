@@ -4,12 +4,15 @@ import { Send, Mic, X, Loader2, MicOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../context/SessionContext";
 import BottomNav from "../../components/BottomNav";
+import { useLanguage } from "../../context/LanguageContext";
+import LanguageSelector from "../../components/LanguageSelector";
 import api from "../../api";
 
 export default function ChatbotPage() {
   const navigate = useNavigate();
   const { sessionId, restaurantId, loading: sessionLoading } = useSession();
   const [activeNav, setActiveNav] = useState("chat");
+  const {language} = useLanguage();
 
   // UI State
   const [messages, setMessages] = useState([]);
@@ -88,7 +91,7 @@ export default function ChatbotPage() {
       const response = await api.post("/api/chatbot/chat", {
         message: text.trim(),
         session_id: sessionId,
-        language: "en",
+        language: language,
         allergies: [],
       });
 
@@ -98,6 +101,7 @@ export default function ChatbotPage() {
         sender: "bot",
         timestamp: new Date(),
         intent: response.data.intent,
+        translated: response.data.translated,
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -211,7 +215,7 @@ export default function ChatbotPage() {
     setIsSending(true);
 
     try {
-      // Convert blob to base64
+      //Convert blob to base64
       const reader = new FileReader();
       
       reader.onloadend = async () => {
@@ -224,17 +228,17 @@ export default function ChatbotPage() {
           const response = await api.post("/api/voice/chat", {
             audio_base64: base64Audio,
             session_id: sessionId,
-            language: "en",
+            language: language,
             allergies: [],
           });
 
           console.log("✅ Voice API response:", response.data);
 
           if (response.data.success) {
-            // Add user's transcribed message
+            //Add user's transcribed message
             const userMessage = {
               id: `user-voice-${Date.now()}`,
-              text: `🎤 ${response.data.user_text}`,
+              text: `${response.data.user_text}`,
               sender: "user",
               timestamp: new Date(),
               isVoice: true,
@@ -328,12 +332,15 @@ export default function ChatbotPage() {
               <p className="text-orange-100 text-xs">Ask me anything about the menu!</p>
             </div>
           </div>
-          <button
-            onClick={clearChat}
-            className="text-white hover:bg-white/20 p-2 rounded-full transition"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageSelector variant="compact" />
+            <button
+              onClick={clearChat}
+              className="text-white hover:bg-white/20 p-2 rounded-full transition"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -344,10 +351,20 @@ export default function ChatbotPage() {
             <div className="text-center py-12">
               <div className="bg-white rounded-3xl p-6 shadow-sm inline-block">
                 <p className="text-gray-600 font-semibold mb-2">
-                  👋 Hi! I'm your AI assistant
+                  👋 {language === 'ar' ? 'مرحباً! أنا مساعدك الذكي' :
+                    language === 'ur' ? 'ہیلو! میں آپ کا AI اسسٹنٹ ہوں' :
+                    language === 'hi' ? 'नमस्ते! मैं आपका AI सहायक हूं' :
+                    language === 'es' ? '¡Hola! Soy tu asistente de IA' :
+                    language === 'fr' ? 'Bonjour! Je suis votre assistant IA' :
+                    "Hi! I'm your AI assistant"}
                 </p>
                 <p className="text-gray-500 text-sm">
-                  Ask me about dishes, ingredients, or allergies!
+                  {language === 'ar' ? 'اسألني عن الأطباق أو المكونات أو الحساسية!' :
+                  language === 'ur' ? 'مجھ سے ڈشز، اجزاء یا الرجی کے بارے میں پوچھیں!' :
+                  language === 'hi' ? 'मुझसे व्यंजन, सामग्री या एलर्जी के बारे में पूछें!' :
+                  language === 'es' ? '¡Pregúntame sobre platos, ingredientes o alergias!' :
+                  language === 'fr' ? 'Demandez-moi des plats, ingrédients ou allergies !' :
+                  "Ask me about dishes, ingredients, or allergies!"}
                 </p>
               </div>
             </div>
@@ -367,7 +384,12 @@ export default function ChatbotPage() {
                     : "bg-white text-gray-900 shadow-sm rounded-bl-none"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                <p 
+                  className="text-sm whitespace-pre-wrap"
+                  dir={language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'}
+                >
+                  {msg.text}
+                </p>
                 <span className="text-xs text-gray-500 mt-1 block">
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
@@ -404,9 +426,17 @@ export default function ChatbotPage() {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything..."
+              placeholder={
+                language === 'ar' ? 'اسألني أي شيء...' :
+                language === 'ur' ? 'مجھ سے کچھ بھی پوچھیں...' :
+                language === 'hi' ? 'मुझसे कुछ भी पूछें...' :
+                language === 'es' ? 'Pregúntame lo que quieras...' :
+                language === 'fr' ? 'Demandez-moi ce que vous voulez...' :
+                'Ask me anything...'
+              }
               disabled={isSending || isRecording}
               className="flex-1 bg-transparent outline-none text-sm"
+              dir={language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -437,7 +467,12 @@ export default function ChatbotPage() {
         {isRecording && (
           <div className="max-w-2xl mx-auto mt-2 text-center">
             <p className="text-red-600 text-sm font-semibold animate-pulse">
-              🔴 Recording... Click mic to stop
+              🔴 {language === 'ar' ? 'جاري التسجيل... انقر على الميكروفون للإيقاف' :
+                language === 'ur' ? 'ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں' :
+                language === 'hi' ? 'रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें' :
+                language === 'es' ? 'Grabando... Haz clic en el micrófono para detener' :
+                language === 'fr' ? 'Enregistrement... Cliquez sur le micro pour arrêter' :
+                'Recording... Click mic to stop'}
             </p>
           </div>
         )}

@@ -67,7 +67,9 @@ def get_translated_menu(restaurant_id: int, lang: str, db: Session = Depends(get
             "price": float(item.price),
             "category": item.category,
             "allergens": item.allergens or [],
-            "ingredients": item.ingredients or ""
+            "ingredients": item.ingredients or "",
+            "image_url": item.image_url,
+            "is_available": item.is_available
         }
         for item in menu_items
     ]

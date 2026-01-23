@@ -1,28 +1,55 @@
-//src/routes/customer/DishPreviewPage.jsx
+// src/routes/customer/DishPreviewPage.jsx
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
+import TranslatedText from "../../components/TranslatedText";
 import { useSession } from "../../context/SessionContext";
+import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 
 export default function DishPreviewPage() {
   const { restaurantId, dishId } = useParams();
   const navigate = useNavigate();
   const { sessionId, selectionId, loading: sessionLoading } = useSession();
+  const { language, tSync } = useLanguage();
   const [activeNav, setActiveNav] = useState("menu");
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  useEffect(()=> {
+  useEffect(() => {
     fetchDishDetails();
-  }, [dishId]);
+  }, [dishId, language]);
 
   const fetchDishDetails = async () => {
+    setLoading(true);
     try {
       const response = await api.get(`/api/menu/${dishId}`);
-      setItem(response.data);
+      const dishData = response.data;
+
+      // If not English, translate the dish
+      if (language !== 'en') {
+        const nameResult = await api.post('/api/translate/text', {
+          text: dishData.name,
+          target_lang: language,
+          source_lang: 'en'
+        });
+        const descResult = await api.post('/api/translate/text', {
+          text: dishData.description || '',
+          target_lang: language,
+          source_lang: 'en'
+        });
+
+        if (nameResult.data.success) {
+          dishData.name = nameResult.data.translated_text;
+        }
+        if (descResult.data.success && dishData.description) {
+          dishData.description = descResult.data.translated_text;
+        }
+      }
+
+      setItem(dishData);
       setLoading(false);
     } catch (err) {
       console.error("Error fetching dish: ", err);
@@ -53,11 +80,11 @@ export default function DishPreviewPage() {
         }
       );
 
-      alert("Item added to cart!");
+      alert(tSync("Item added to cart!"));
       navigate(`/restaurant/${restaurantId}/cart`);
     } catch (err) {
       console.error("Error adding to cart:", err);
-      alert("Failed to add item to cart");
+      alert(tSync("Failed to add item to cart"));
     } finally {
       setAddingToCart(false);
     }
@@ -67,7 +94,9 @@ export default function DishPreviewPage() {
     return (
       <div className="min-h-screen bg-yellow-300 flex items-center justify-center">
         <div className="bg-white rounded-3xl p-6 text-center">
-          <p className="font-semibold text-gray-900">Loading...</p>
+          <p className="font-semibold text-gray-900">
+            <TranslatedText>Loading...</TranslatedText>
+          </p>
         </div>
       </div>      
     );
@@ -77,12 +106,14 @@ export default function DishPreviewPage() {
     return (
       <div className="min-h-screen bg-yellow-300 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl p-6 text-center w-full max-w-sm shadow-sm">
-          <p className="font-semibold text-gray-900">Dish not found</p>
+          <p className="font-semibold text-gray-900">
+            <TranslatedText>Dish not found</TranslatedText>
+          </p>
           <button
             className="mt-4 px-5 py-2 rounded-full bg-orange-600 text-white font-bold"
             onClick={goBackToMenu}
           >
-            Back to menu
+            <TranslatedText>Back to menu</TranslatedText>
           </button>
           <p className="mt-3 text-xs text-gray-500">
             Missing ID: <span className="font-mono">{dishId}</span>
@@ -101,11 +132,6 @@ export default function DishPreviewPage() {
             <h1 className="text-xl font-extrabold text-gray-900">
               • {item.name}
             </h1>
-            {/*
-            <span className="inline-flex mt-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              {item.rating?.toFixed ? item.rating.toFixed(1) : item.rating}
-            </span>
-            */}
             <span className="inline-flex mt-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               ${item.price?.toFixed(2)}
             </span>
@@ -115,7 +141,7 @@ export default function DishPreviewPage() {
             onClick={goBackToMenu}
             className="text-sm font-bold text-gray-900"
           >
-            Back
+            <TranslatedText>Back</TranslatedText>
           </button>
         </div>
 
@@ -123,7 +149,7 @@ export default function DishPreviewPage() {
         <div className="mt-4 bg-white rounded-[32px] p-5 shadow-sm">
           <div className="flex justify-center">
             <div className="bg-gray-200 text-orange-600 font-extrabold rounded-full px-10 py-3 text-sm tracking-wide">
-              DISH PREVIEW
+              <TranslatedText>DISH PREVIEW</TranslatedText>
             </div>
           </div>
 
@@ -142,7 +168,9 @@ export default function DishPreviewPage() {
           {/* Description */}
           {item.description && (
             <div className="mt-4 text-[13px] text-gray-900">
-              <p className="font-extrabold">Description:</p>
+              <p className="font-extrabold">
+                <TranslatedText>Description:</TranslatedText>
+              </p>
               <p className="text-gray-700 leading-relaxed">
                 {item.description}
               </p>
@@ -151,47 +179,38 @@ export default function DishPreviewPage() {
 
           {/* Text blocks */}
           <div className="mt-4 text-[13px] text-gray-900 space-y-4">
-            {/*}
             <div>
-              <p className="font-extrabold">Ingredients:</p>
-              <p className="text-gray-700 leading-relaxed">
-                {item.ingredients || "—"}
+              <p className="font-extrabold">
+                <TranslatedText>Category:</TranslatedText>
               </p>
-            </div>
-            */}
-
-            <div>
-              <p className="font-extrabold">Category:</p>
               <p className="text-gray-700 leading-relaxed">
                 {item.category || "—"}
               </p>
             </div>
 
             <div>
-              <p className="font-extrabold">Allergens:</p>
+              <p className="font-extrabold">
+                <TranslatedText>Allergens:</TranslatedText>
+              </p>
               <p className="text-gray-700 leading-relaxed">
                 {item.allergens && item.allergens.length > 0
                   ? item.allergens.join(", ")
-                  : "None listed"}
+                  : tSync("None listed")}
               </p>
             </div>
-
-            {/*
-            <div>
-              <p className="font-extrabold">Nutrition (per serving):</p>
-              <p className="text-gray-700 leading-relaxed">
-                {item.nutrition || "—"}
-              </p>
-            </div>
-            */}
 
             <div>
-              <p className="font-extrabold">Availability:</p>
+              <p className="font-extrabold">
+                <TranslatedText>Availability:</TranslatedText>
+              </p>
               <p className="text-gray-700 leading-relaxed">
-                {item.is_available ? "✓ Available" : "✗ Currently unavailable"}
+                {item.is_available ? (
+                  <TranslatedText>✓ Available</TranslatedText>
+                ) : (
+                  <TranslatedText>✗ Currently unavailable</TranslatedText>
+                )}
               </p>
             </div>
-
           </div>
 
           {/* Buttons */}
@@ -201,14 +220,16 @@ export default function DishPreviewPage() {
               className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!item.is_available}
             >
-              Customize
+              <TranslatedText>Customize</TranslatedText>
             </button>
             <button 
               onClick={handleQuickOrder}
               className="w-44 rounded-full bg-orange-600 text-white font-extrabold py-3 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!item.is_available || addingToCart}
             >
-              {addingToCart ? "Adding..." : "Place Order"}
+              <TranslatedText>
+                {addingToCart ? "Adding..." : "Place Order"}
+              </TranslatedText>
             </button>
           </div>
         </div>

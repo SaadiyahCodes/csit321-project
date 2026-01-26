@@ -19,6 +19,7 @@ export default function MenuPage() {
 
   useEffect(() => {
     fetchMenuItems();
+    console.log("Menu items updated:", menuItems);
   }, [restaurantId, language]);
 
   const fetchMenuItems = async () => {
@@ -27,11 +28,14 @@ export default function MenuPage() {
       // If not English, get translated menu
       if (language !== 'en') {
         const response = await api.get(`/api/translate/menu/${restaurantId}/${language}`);
+        console.log("🔍 Translated menu response:", response.data);
         setMenuItems(response.data.items);
       } else {
         // Otherwise get original menu
         const response = await api.get(`/api/menu/?restaurant_id=${restaurantId}`);
+        console.log("🔍 Original menu response:", response.data);
         setMenuItems(response.data);
+
       }
       setLoading(false);
     } catch (err) {

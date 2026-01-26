@@ -61,24 +61,36 @@ class TranslationService:
             return response
             
         except Exception as e:
+            print(f"❌ Translation error for '{text}': {e}")
             return {"error": str(e), "success": False}
     
     def translate_batch(self, items: List[Dict], target_lang: str) -> List[Dict]:
         """Translate multiple items"""
+        print(f"🔍 translate_batch called with {len(items)} items, target_lang={target_lang}")
+        
+        if not items:
+            print("⚠️ No items to translate!")
+            return []
+        
         translated = []
         
-        for item in items:
+        for i, item in enumerate(items):
+            print(f"🔍 Translating item {i+1}/{len(items)}: {item.get('name', 'NO NAME')}")
+            
             name_result = self.translate_text(item.get("name", ""), target_lang)
             desc_result = self.translate_text(item.get("description", ""), target_lang)
             
-            translated.append({
-                **item,  # Keep all original fields
+            translated_item = {
+                **item,
                 "name": name_result.get("translated_text", item.get("name")),
                 "description": desc_result.get("translated_text", item.get("description")),
                 "original_name": item.get("name"),
                 "original_description": item.get("description")
-            })
+            }
+            
+            translated.append(translated_item)
         
+        print(f"🔍 translate_batch returning {len(translated)} items")
         return translated
     
     def get_cache_stats(self):

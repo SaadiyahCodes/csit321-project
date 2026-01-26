@@ -11,7 +11,6 @@ import DishPreviewPage from './routes/customer/DishPreviewPage';
 import DishCustomizationPage from './routes/customer/DishCustomizationPage';
 import CartPage from './routes/customer/CartPage';
 import OrderSummaryPage from './routes/customer/OrderSummaryPage';
-import ChatbotPage from './routes/customer/ChatbotPage';
 import { SessionProvider } from './context/SessionContext';
 
 function App() {
@@ -29,7 +28,6 @@ function App() {
               <Route path="customize/:dishId" element={<DishCustomizationPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="order-summary" element={<OrderSummaryPage />} />
-              <Route path="chat" element={<ChatbotPage />} />
             </Routes>
           </SessionProvider>
         } />

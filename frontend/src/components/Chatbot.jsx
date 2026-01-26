@@ -1,18 +1,14 @@
-// src/routes/customer/ChatbotPage.jsx
+// src/components/Chatbot.jsx
 import { useState, useEffect, useRef } from "react";
 import { Send, Mic, X, Loader2, MicOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useSession } from "../../context/SessionContext";
-import BottomNav from "../../components/BottomNav";
-import { useLanguage } from "../../context/LanguageContext";
-import LanguageSelector from "../../components/LanguageSelector";
-import api from "../../api";
+import { useSession } from "../context/SessionContext";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSelector from "./LanguageSelector";
+import api from "../api";
 
-export default function ChatbotPage() {
-  const navigate = useNavigate();
-  const { sessionId, restaurantId, loading: sessionLoading } = useSession();
-  const [activeNav, setActiveNav] = useState("chat");
-  const {language} = useLanguage();
+export default function Chatbot({ isOpen, onClose }) {
+  const { sessionId, restaurantId } = useSession();
+  const { language } = useLanguage();
 
   // UI State
   const [messages, setMessages] = useState([]);
@@ -23,7 +19,6 @@ export default function ChatbotPage() {
 
   // Voice Recording
   const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
   const audioChunksRef = useRef([]);
 
   // Refs
@@ -39,12 +34,12 @@ export default function ChatbotPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history on mount
+  // Load chat history when opened
   useEffect(() => {
-    if (sessionId) {
+    if (isOpen && sessionId) {
       loadChatHistory();
     }
-  }, [sessionId]);
+  }, [isOpen, sessionId]);
 
   const loadChatHistory = async () => {
     try {
@@ -153,7 +148,6 @@ export default function ChatbotPage() {
         } 
       });
       
-      // Reset audio chunks
       audioChunksRef.current = [];
       
       const recorder = new MediaRecorder(stream, {
@@ -163,33 +157,25 @@ export default function ChatbotPage() {
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
-          console.log("📦 Audio chunk received:", e.data.size, "bytes");
         }
       };
 
       recorder.onstop = async () => {
-        console.log("⏹️ Recording stopped, total chunks:", audioChunksRef.current.length);
-        
         if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, { 
             type: recorder.mimeType 
           });
-          console.log("🎵 Audio blob created:", audioBlob.size, "bytes");
-          
           await sendVoiceMessage(audioBlob);
         } else {
-          console.error("❌ No audio data recorded");
           alert("No audio was recorded. Please try again.");
         }
         
-        // Stop all tracks
         stream.getTracks().forEach((track) => track.stop());
       };
 
-      recorder.start(100); // Collect data every 100ms
+      recorder.start(100);
       setMediaRecorder(recorder);
       setIsRecording(true);
-      console.log("✅ Recording started successfully");
       
     } catch (error) {
       console.error("❌ Microphone access error:", error);
@@ -197,10 +183,7 @@ export default function ChatbotPage() {
     }
   };
 
-  // Voice Recording - STOP
   const stopRecording = () => {
-    console.log("🛑 Stopping recording...");
-    
     if (mediaRecorder && mediaRecorder.state === "recording") {
       mediaRecorder.stop();
       setIsRecording(false);
@@ -208,23 +191,17 @@ export default function ChatbotPage() {
     }
   };
 
-  // Send Voice Message
   const sendVoiceMessage = async (audioBlob) => {
-    console.log("📤 Sending voice message...");
     setIsTyping(true);
     setIsSending(true);
 
     try {
-      //Convert blob to base64
       const reader = new FileReader();
       
       reader.onloadend = async () => {
         const base64Audio = reader.result.split(",")[1];
-        console.log("📊 Base64 audio size:", base64Audio.length, "chars");
 
         try {
-          console.log("🚀 Calling /api/voice/chat...");
-          
           const response = await api.post("/api/voice/chat", {
             audio_base64: base64Audio,
             session_id: sessionId,
@@ -232,19 +209,15 @@ export default function ChatbotPage() {
             allergies: [],
           });
 
-          console.log("✅ Voice API response:", response.data);
-
           if (response.data.success) {
-            //Add user's transcribed message
             const userMessage = {
               id: `user-voice-${Date.now()}`,
-              text: `${response.data.user_text}`,
+              text: response.data.user_text,
               sender: "user",
               timestamp: new Date(),
               isVoice: true,
             };
 
-            // Add bot's response
             const botMessage = {
               id: `bot-voice-${Date.now()}`,
               text: response.data.bot_text,
@@ -260,7 +233,6 @@ export default function ChatbotPage() {
               try {
                 const audio = new Audio(`data:audio/mp3;base64,${response.data.bot_audio}`);
                 audio.play();
-                console.log("🔊 Playing audio response");
               } catch (audioError) {
                 console.error("Audio playback error:", audioError);
               }
@@ -281,7 +253,6 @@ export default function ChatbotPage() {
       };
 
       reader.onerror = () => {
-        console.error("❌ FileReader error");
         alert("Failed to process audio. Please try again.");
       };
 
@@ -296,69 +267,113 @@ export default function ChatbotPage() {
     }
   };
 
-  const clearChat = async () => {
-    if (!confirm("Clear all messages?")) return;
-
-    try {
-      await api.delete(`/api/chatbot/clear/${sessionId}`);
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to clear chat:", error);
-    }
-  };
-
-  if (sessionLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-orange-600" size={40} />
-      </div>
-    );
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 shadow-lg">
-        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/restaurant/${restaurantId}/menu`)}
-              className="text-white text-2xl font-bold"
-            >
-              ←
-            </button>
-            <div>
-              <h1 className="text-white font-extrabold text-lg">AI Assistant</h1>
-              <p className="text-orange-100 text-xs">Ask me anything about the menu!</p>
-            </div>
+    <>
+      {/* Backdrop/Overlay */}
+      <div 
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          zIndex: 999,
+          backdropFilter: 'blur(2px)'
+        }}
+      />
+
+      {/* Chatbot Panel */}
+      <div style={{
+        position: 'fixed',
+        bottom: '80px',
+        right: '16px',
+        width: '400px',
+        maxWidth: 'calc(100vw - 32px)',
+        height: '600px',
+        maxHeight: 'calc(100vh - 120px)',
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}>
+        
+        {/* Header */}
+        <div style={{
+          background: 'linear-gradient(to right, #f97316, #ea580c)',
+          padding: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0
+        }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ color: 'white', fontSize: '18px', fontWeight: 'bold', margin: 0 }}>
+              Gusto AI Assistant
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '11px', margin: '2px 0 0 0' }}>
+              Ask me anything about the menu!
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Language Selector & Close Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <LanguageSelector variant="compact" />
+            
             <button
-              onClick={clearChat}
-              className="text-white hover:bg-white/20 p-2 rounded-full transition"
+              onClick={onClose}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'background 0.2s'
+              }}
             >
-              <X size={20} />
+              <X size={18} style={{ color: 'white' }} />
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 pb-32">
-        <div className="max-w-2xl mx-auto space-y-4">
+        {/* Messages Container */}
+        <div style={{
+          flex: 1,
+          padding: '16px',
+          backgroundColor: '#fafafa',
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px'
+        }}>
           {messages.length === 0 && (
-            <div className="text-center py-12">
-              <div className="bg-white rounded-3xl p-6 shadow-sm inline-block">
-                <p className="text-gray-600 font-semibold mb-2">
+            <div style={{ textAlign: 'center', marginTop: '40px' }}>
+              <div style={{
+                backgroundColor: 'white',
+                borderRadius: '20px',
+                padding: '20px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                display: 'inline-block'
+              }}>
+                <p style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
                   👋 {language === 'ar' ? 'مرحباً! أنا مساعدك الذكي' :
                     language === 'ur' ? 'ہیلو! میں آپ کا AI اسسٹنٹ ہوں' :
                     language === 'hi' ? 'नमस्ते! मैं आपका AI सहायक हूं' :
-                    language === 'es' ? '¡Hola! Soy tu asistente de IA' :
-                    language === 'fr' ? 'Bonjour! Je suis votre assistant IA' :
+                    language === 'es' ? '¡Hola! Soy tu asistente de AI' :
+                    language === 'fr' ? 'Bonjour! Je suis votre assistant AI' :
                     "Hi! I'm your AI assistant"}
                 </p>
-                <p className="text-gray-500 text-sm">
+                <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
                   {language === 'ar' ? 'اسألني عن الأطباق أو المكونات أو الحساسية!' :
                   language === 'ur' ? 'مجھ سے ڈشز، اجزاء یا الرجی کے بارے میں پوچھیں!' :
                   language === 'hi' ? 'मुझसे व्यंजन, सामग्री या एलर्जी के बारे में पूछें!' :
@@ -373,24 +388,37 @@ export default function ChatbotPage() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+              style={{
+                display: 'flex',
+                justifyContent: msg.sender === "user" ? 'flex-end' : 'flex-start',
+              }}
             >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  msg.sender === "user"
-                    ? "bg-yellow-100 text-gray-900 rounded-br-none"
-                    : msg.isError
-                    ? "bg-red-50 text-red-800 border border-red-200 rounded-bl-none"
-                    : "bg-white text-gray-900 shadow-sm rounded-bl-none"
-                }`}
-              >
-                <p 
-                  className="text-sm whitespace-pre-wrap"
-                  dir={language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'}
-                >
+              <div style={{
+                backgroundColor: msg.sender === "user" ? '#fef3c7' : msg.isError ? '#fee2e2' : 'white',
+                border: msg.sender === "user" ? 'none' : msg.isError ? '1px solid #fca5a5' : '1px solid #e5e7eb',
+                borderRadius: msg.sender === "user" ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                padding: '12px 14px',
+                maxWidth: '85%',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+              }}>
+                <p style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: '#111827',
+                  lineHeight: '1.5',
+                  whiteSpace: 'pre-wrap',
+                  direction: language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'
+                }}>
                   {msg.text}
                 </p>
-                <span className="text-xs text-gray-500 mt-1 block">
+
+                <span style={{
+                  fontSize: '10px',
+                  color: '#9ca3af',
+                  display: 'block',
+                  textAlign: msg.sender === 'user' ? 'right' : 'left',
+                  marginTop: '6px'
+                }}>
                   {msg.timestamp.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -401,25 +429,40 @@ export default function ChatbotPage() {
           ))}
 
           {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-white rounded-2xl rounded-bl-none px-4 py-3 shadow-sm">
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></span>
-                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '16px 16px 16px 4px',
+                padding: '12px 14px',
+                display: 'flex',
+                gap: '4px'
+              }}>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out' }}></span>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out 0.2s' }}></span>
+                <span style={{ width: '8px', height: '8px', backgroundColor: '#9ca3af', borderRadius: '50%', animation: 'bounce 1.4s infinite ease-in-out 0.4s' }}></span>
               </div>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
-      </div>
 
-      {/* Input Area */}
-      <div className="fixed bottom-16 left-0 right-0 bg-white border-t shadow-lg p-4">
-        <div className="max-w-2xl mx-auto flex items-center gap-2">
-          <div className="flex-1 bg-gray-100 rounded-full px-4 py-3 flex items-center gap-2">
+        {/* Input Area */}
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid #e5e7eb',
+          flexShrink: 0,
+          backgroundColor: 'white'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '10px',
+            backgroundColor: '#f3f4f6',
+            borderRadius: '24px',
+            padding: '12px 16px',
+            border: '1px solid #e5e7eb'
+          }}>
             <input
               ref={inputRef}
               type="text"
@@ -435,53 +478,64 @@ export default function ChatbotPage() {
                 'Ask me anything...'
               }
               disabled={isSending || isRecording}
-              className="flex-1 bg-transparent outline-none text-sm"
-              dir={language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'}
+              style={{
+                flex: 1,
+                border: 'none',
+                outline: 'none',
+                backgroundColor: 'transparent',
+                fontSize: '14px',
+                color: '#111827',
+                direction: language === 'ar' || language === 'ur' ? 'rtl' : 'ltr'
+              }}
             />
+            
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isSending}
+              style={{
+                background: isRecording ? '#ef4444' : 'none',
+                border: 'none',
+                cursor: isSending ? 'not-allowed' : 'pointer',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                animation: isRecording ? 'pulse 1s infinite' : 'none'
+              }}
+            >
+              {isRecording ? <MicOff size={20} style={{ color: 'white' }} /> : <Mic size={20} style={{ color: '#f97316' }} />}
+            </button>
+            
+            <button
+              onClick={handleSend}
+              disabled={!inputText.trim() || isSending || isRecording}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: inputText.trim() && !isSending ? 'pointer' : 'not-allowed',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              {isSending ? <Loader2 size={20} style={{ color: '#f97316', animation: 'spin 1s linear infinite' }} /> : <Send size={20} style={{ color: inputText.trim() && !isSending ? '#f97316' : '#d1d5db' }} />}
+            </button>
           </div>
 
-          {/* Voice Button */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isSending}
-            className={`p-3 rounded-full transition ${
-              isRecording
-                ? "bg-red-500 text-white animate-pulse"
-                : "bg-orange-600 text-white hover:bg-orange-700"
-            } disabled:opacity-50`}
-          >
-            {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-          </button>
-
-          {/* Send Button */}
-          <button
-            onClick={handleSend}
-            disabled={!inputText.trim() || isSending || isRecording}
-            className="bg-orange-600 text-white p-3 rounded-full hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
-          </button>
+          {/* Recording Indicator */}
+          {isRecording && (
+            <div style={{ marginTop: '8px', textAlign: 'center' }}>
+              <p style={{ color: '#ef4444', fontSize: '12px', fontWeight: '600' }}>
+                🔴 {language === 'ar' ? 'جاري التسجيل... انقر على الميكروفون للإيقاف' :
+                  language === 'ur' ? 'ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں' :
+                  language === 'hi' ? 'रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें' :
+                  language === 'es' ? 'Grabando... Haz clic en el micrófono para detener' :
+                  language === 'fr' ? 'Enregistrement... Cliquez sur le micro pour arrêter' :
+                  'Recording... Click mic to stop'}
+              </p>
+            </div>
+          )}
         </div>
-        
-        {/* Recording Indicator */}
-        {isRecording && (
-          <div className="max-w-2xl mx-auto mt-2 text-center">
-            <p className="text-red-600 text-sm font-semibold animate-pulse">
-              🔴 {language === 'ar' ? 'جاري التسجيل... انقر على الميكروفون للإيقاف' :
-                language === 'ur' ? 'ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں' :
-                language === 'hi' ? 'रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें' :
-                language === 'es' ? 'Grabando... Haz clic en el micrófono para detener' :
-                language === 'fr' ? 'Enregistrement... Cliquez sur le micro pour arrêter' :
-                'Recording... Click mic to stop'}
-            </p>
-          </div>
-        )}
       </div>
-
-      {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0">
-        <BottomNav active={activeNav} onChange={setActiveNav} />
-      </div>
-    </div>
+    </>
   );
 }

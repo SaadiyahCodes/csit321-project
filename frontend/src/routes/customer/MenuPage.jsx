@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import CategoryBar from "../../components/CategoryBar";
 import MenuCard from "../../components/MenuCard";
 import BottomNav from "../../components/BottomNav";
+import LanguageSelector from "../../components/LanguageSelector";
+import Chatbot from "../../components/Chatbot";
 import TranslatedText from "../../components/TranslatedText";
 import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
@@ -15,27 +17,24 @@ export default function MenuPage() {
   const [activeNav, setActiveNav] = useState("menu");
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchMenuItems();
-    console.log("Menu items updated:", menuItems);
   }, [restaurantId, language]);
 
   const fetchMenuItems = async () => {
     setLoading(true);
     try {
-      // If not English, get translated menu
       if (language !== 'en') {
         const response = await api.get(`/api/translate/menu/${restaurantId}/${language}`);
         console.log("🔍 Translated menu response:", response.data);
         setMenuItems(response.data.items);
       } else {
-        // Otherwise get original menu
         const response = await api.get(`/api/menu/?restaurant_id=${restaurantId}`);
         console.log("🔍 Original menu response:", response.data);
         setMenuItems(response.data);
-
       }
       setLoading(false);
     } catch (err) {
@@ -69,8 +68,11 @@ export default function MenuPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4">
-        <div className="rounded-3xl bg-yellow-300 h-10 sm:h-14" />
-
+        {/* Top Bar with Language Selector */}
+        <div className="rounded-3xl bg-yellow-300 h-14 sm:h-16 flex items-center justify-between px-6">
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Menu</h1>
+          <LanguageSelector variant="compact" />
+        </div>
         <div className="-mt-5">
           <CategoryBar active={activeCategory} onChange={setActiveCategory} />
         </div>
@@ -89,11 +91,19 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <div className="sm:hidden fixed bottom-0 left-0 right-0">
-        <BottomNav active={activeNav} onChange={setActiveNav} />
+      <div className="fixed bottom-0 left-0 right-0">
+        <BottomNav 
+          active={activeNav} 
+          onChange={setActiveNav}
+          onChatToggle={() => setIsChatOpen(!isChatOpen)}
+        />
       </div>
 
-      <div className="h-20 sm:hidden" />
+      {/* Chatbot Component */}
+      <Chatbot 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+      />
     </div>
   );
 }

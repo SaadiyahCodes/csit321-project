@@ -4,8 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useContext } from "react";
 import { SessionContext } from "../context/SessionContext";
 
-//Always show 3 buttons, but disable cart/chat on home page
-export default function BottomNav({ active, onChange }) {
+export default function BottomNav({ active, onChange, onChatToggle }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,7 +28,7 @@ export default function BottomNav({ active, onChange }) {
         alert("Please select a restaurant first");
         return;
       }
-      navigate(`/restaurant/${restaurantId}/chat`);
+      onChatToggle?.();
       onChange?.("chat");
     }
   };

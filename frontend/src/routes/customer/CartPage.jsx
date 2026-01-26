@@ -6,6 +6,7 @@ import BottomNav from "../../components/BottomNav";
 import TranslatedText from "../../components/TranslatedText";
 import { useSession } from "../../context/SessionContext";
 import { useLanguage } from "../../context/LanguageContext";
+import Chatbot from "../../components/Chatbot";
 import api from "../../api";
 
 export default function CartPage() {
@@ -17,6 +18,7 @@ export default function CartPage() {
   const [selection, setSelection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState({});
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     if (selectionId && sessionId) {
@@ -263,7 +265,14 @@ export default function CartPage() {
 
       {/* Bottom Nav */}
       <div className="fixed bottom-0 left-0 right-0">
-        <BottomNav active={activeNav} onChange={setActiveNav} />
+        <BottomNav active={activeNav} onChange={setActiveNav}
+         onChatToggle={() => setIsChatOpen(!isChatOpen)} 
+        />
+
+        <Chatbot 
+          isOpen={isChatOpen} 
+          onClose={() => setIsChatOpen(false)} 
+        />
       </div>
     </div>
   );

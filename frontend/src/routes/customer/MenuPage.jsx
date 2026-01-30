@@ -16,6 +16,7 @@ export default function MenuPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeNav, setActiveNav] = useState("menu");
   const [menuItems, setMenuItems] = useState([]);
+  const [restaurantName, setRestaurantName] = useState("");
   const [loading, setLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
@@ -26,6 +27,8 @@ export default function MenuPage() {
 
   const fetchMenuItems = async () => {
     setLoading(true);
+    const restaurantRes = await api.get(`/api/restaurants/${restaurantId}`);
+    setRestaurantName(restaurantRes.data.name);
     try {
       if (language !== 'en') {
         const response = await api.get(`/api/translate/menu/${restaurantId}/${language}`);
@@ -69,11 +72,16 @@ export default function MenuPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4">
         {/* Top Bar with Language Selector */}
-        <div className="rounded-3xl bg-yellow-300 h-14 sm:h-16 flex items-center justify-between px-6">
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900">Menu</h1>
-          <LanguageSelector variant="compact" />
+        <div className="rounded-3xl bg-yellow-300 flex items-center justify-between px-6" style={{ paddingTop: '20px', paddingBottom: '28px' }}>
+          <div style={{ flex: 1 }}></div>
+          <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ flex: 2, textAlign: 'center' }}>
+            {restaurantName ? `${restaurantName} - Menu` : "Menu"}
+          </h1>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+            <LanguageSelector variant="compact" />
         </div>
-        <div className="-mt-5">
+      </div>
+        <div className="mt-3">
           <CategoryBar active={activeCategory} onChange={setActiveCategory} />
         </div>
 

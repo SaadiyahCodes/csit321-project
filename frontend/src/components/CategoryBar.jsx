@@ -10,7 +10,7 @@ const categories = [
 
 export default function CategoryBar({ active, onChange }) {
   return (
-    <div className="bg-orange-600 rounded-3xl px-5 py-4 flex justify-between">
+    <div className="bg-orange-600 rounded-3xl px-5 py-4 flex justify-between shadow-md shadow-black/20">
       {categories.map((c) => {
         const Icon = c.icon;
         const isActive = active === c.id;
@@ -19,7 +19,8 @@ export default function CategoryBar({ active, onChange }) {
           <button
             key={c.id}
             onClick={() => onChange(c.id)}
-            className="flex flex-col items-center gap-2"
+            className="flex flex-col items-center gap-2 transition-transform active:scale-95"
+
           >
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center ${

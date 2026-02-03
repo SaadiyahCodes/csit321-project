@@ -8,6 +8,8 @@ import AdminRoute from './routes/AdminRoute';
 import LandingPage from './routes/customer/LandingPage';
 import MenuPage from './routes/customer/MenuPage';
 import DishPreviewPage from './routes/customer/DishPreviewPage';
+import ARViewer from './ar/ARViewer';
+
 
 function App() {
   return (
@@ -16,6 +18,9 @@ function App() {
         <Route path="/" element={<LandingPage/>} />
         <Route path="/restaurant/:restaurantId/menu" element={<MenuPage/>} />
         <Route path="/restaurant/:restaurantId/dish/:dishId" element={<DishPreviewPage/>} />
+
+        {/* AR route */}
+        <Route path="/ar" element={<ARViewer />} />
 
         {/*Admin Portal */}
         <Route path="/login" element={<Login/>} />

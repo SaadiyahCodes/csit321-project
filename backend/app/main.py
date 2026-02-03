@@ -14,7 +14,7 @@ app = FastAPI(title="Gusto API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://192.168.0.109:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

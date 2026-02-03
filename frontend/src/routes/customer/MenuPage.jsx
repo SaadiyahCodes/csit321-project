@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import CategoryBar from "../../components/CategoryBar";
 import MenuCard from "../../components/MenuCard";
 import BottomNav from "../../components/BottomNav";
+import ARViewer from "../../ar/ARViewer"; // Import your ARViewer
 import api from "../../api";
 
 export default function MenuPage() {
@@ -11,6 +12,7 @@ export default function MenuPage() {
   const [activeNav, setActiveNav] = useState("menu");
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [previewItem, setPreviewItem] = useState(null);
   const navigate = useNavigate();
 
   useEffect(()=> {
@@ -35,8 +37,8 @@ export default function MenuPage() {
   }, [activeCategory, menuItems]);
 
   const onAR = (item) => {
-    if (!item.armodelurl) return alert("AR model not available for this item.");
-    alert(`AR Preview: ${item.title}\n${item.armodelurl}`);
+    if (!item.ar_model_url) return alert("AR model not available for this item.");
+    setPreviewItem(item);
   };
 
   // when a card is clicked, go to dish preview page
@@ -81,6 +83,15 @@ export default function MenuPage() {
       </div>
 
       <div className="h-20 sm:hidden" />
+            {/* ARViewer Modal */}
+      {previewItem && (
+        <ARViewer
+          modelUrl={previewItem.ar_model_url}
+          imageUrl={previewItem.image_url}
+          dishName={previewItem.name}
+          onClose={() => setPreviewItem(null)} // close modal
+        />
+      )}
     </div>
   );
 }

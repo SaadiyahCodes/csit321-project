@@ -65,10 +65,47 @@ export default function LandingPage() {
           paddingRight: '15px',
           marginTop: '4px'
         }}>
-          {/* Language Selector - top right */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-            <LanguageSelector variant="compact" />
-          </div>
+
+          {/* Top Right Controls */}
+<div style={{
+  display: 'flex',
+  justifyContent: 'flex-end',
+  alignItems: 'center',
+  gap: '12px',
+  marginBottom: '16px'
+}}>
+  <LanguageSelector variant="compact" />
+
+  {/* Profile Button */}
+  <button
+    onClick={() => window.location.href = '/customer/profile'}
+    style={{
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      padding: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  </button>
+</div>
+
 
           <div style={{ 
             display: 'flex', 

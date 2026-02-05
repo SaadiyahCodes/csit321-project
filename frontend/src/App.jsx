@@ -11,6 +11,8 @@ import DishPreviewPage from './routes/customer/DishPreviewPage';
 import DishCustomizationPage from './routes/customer/DishCustomizationPage';
 import CartPage from './routes/customer/CartPage';
 import OrderSummaryPage from './routes/customer/OrderSummaryPage';
+import CustomerLogin from './routes/customer/CustomerLogin';
+import CustomerProfile from './routes/customer/CustomerProfile';
 import { SessionProvider } from './context/SessionContext';
 
 function App() {
@@ -34,6 +36,10 @@ function App() {
 
         {/*Admin Portal */}
         <Route path="/login" element={<Login/>} />
+
+        {/* Customer Login */}
+        <Route path="/customer/login" element={<CustomerLogin/>} />
+        <Route path="/customer/profile" element={<CustomerProfile/>} />
 
         <Route
           path="/admin"

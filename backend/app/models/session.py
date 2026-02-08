@@ -9,9 +9,11 @@ class CustomerSession(Base):
 
     session_id = Column(String(100), primary_key=True, index=True)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=False)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
     language = Column(String, default="en", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     restaurant = relationship("Restaurant")
+    customer = relationship("Customer")
     selections = relationship("Selection", back_populates="session", cascade="all, delete-orphan")

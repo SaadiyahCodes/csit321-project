@@ -13,6 +13,7 @@ def create_session(db: Session, data: SessionCreate):
     session = CustomerSession(
         session_id=data.session_id,
         restaurant_id=data.restaurant_id,
+        customer_id=data.customer_id,
         language=data.language
     )
     db.add(session)
@@ -24,6 +25,10 @@ def create_session(db: Session, data: SessionCreate):
 def get_or_create_session(db: Session, data: SessionCreate): 
     existing = get_session_by_id(db, data.session_id)
     if existing:
+        if data.customer_id and not existing.customer_id:
+            existing.customer_id = data.customer_id
+            db.commit()
+            db.refresh(existing)
         return existing
     return create_session(db, data)
 

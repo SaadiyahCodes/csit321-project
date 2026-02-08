@@ -4,7 +4,8 @@ from app.db.database import engine
 from app.db.base import Base
 from app.routers import (
     auth, admin, menu, restaurant, session, selection, 
-    chatbot, translation, menu_search, voice
+    chatbot, translation, menu_search, voice,
+    customer_auth, customer_profile, customer_orders
 )
 
 # Create tables
@@ -31,6 +32,9 @@ app.include_router(chatbot.router)
 app.include_router(translation.router)
 app.include_router(menu_search.router)
 app.include_router(voice.router)
+app.include_router(customer_auth.router)
+app.include_router(customer_profile.router)
+app.include_router(customer_orders.router)
 
 @app.get("/")
 def root():

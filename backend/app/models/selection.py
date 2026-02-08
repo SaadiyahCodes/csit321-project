@@ -16,6 +16,7 @@ class Selection(Base):
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(String(100), ForeignKey("customer_sessions.session_id"), nullable=False)
     restaurant_id = Column(Integer, ForeignKey("restaurants.id"), nullable=True)
+    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     status = Column(Enum(SelectionStatus), default=SelectionStatus.PENDING, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     finalized_at = Column(DateTime(timezone=True), nullable=True)
@@ -23,6 +24,7 @@ class Selection(Base):
     # Relationships
     session = relationship("CustomerSession", back_populates="selections")
     restaurant = relationship("Restaurant")
+    customer = relationship("Customer")
     items = relationship("SelectionItem", back_populates="selection", cascade="all, delete-orphan")
 
 # Model for selection items

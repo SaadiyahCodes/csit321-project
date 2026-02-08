@@ -17,6 +17,8 @@ from app.models.restaurant import Restaurant
 from app.models.menuitems import MenuItem
 from app.models.session import CustomerSession
 from app.models.selection import Selection, SelectionItem
+from app.models.customer import Customer
+from app.models.customer_profile import CustomerProfile
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

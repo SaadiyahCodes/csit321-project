@@ -3,6 +3,7 @@ from sqlalchemy import and_
 from datetime import datetime, timezone
 from app.models.selection import Selection, SelectionItem, SelectionStatus
 from app.crud import menu as menu_crud
+from app.crud import session as session_crud
 
 # CRUD operations for selection (cart)
 
@@ -20,7 +21,13 @@ def get_or_create_selection(db: Session, session_id: str):
     ).first()
     
     if not selection:
-        selection = Selection(session_id=session_id) 
+        # Get session to inherit customer_id
+        session = session_crud.get_session_by_id(db, session_id)
+        
+        selection = Selection(
+            session_id=session_id,
+            customer_id=session.customer_id if session else None  # Inherit from session
+        ) 
         db.add(selection)
         db.commit()
         db.refresh(selection)

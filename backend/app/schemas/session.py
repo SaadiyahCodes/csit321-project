@@ -6,6 +6,7 @@ from datetime import datetime
 class SessionCreate(BaseModel):
     session_id: str
     restaurant_id: int
+    customer_id: int | None = None
     language: str = "en"
 
     # Uncomment the following validator if you want to enforce UUID format for session_id
@@ -23,6 +24,7 @@ class SessionCreate(BaseModel):
 class SessionResponse(BaseModel):
     session_id: str
     restaurant_id: int
+    customer_id: int | None = None
     language: str
     created_at: datetime
 

@@ -19,7 +19,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage/>} />
+        <Route path="/" element={
+          <SessionProvider>
+            <LandingPage/>
+          </SessionProvider>
+        } />
         
         {/* Wrap restaurant routes with SessionProvider */}
         <Route path="/restaurant/:restaurantId/*" element={
@@ -36,11 +40,6 @@ function App() {
 
         {/*Admin Portal */}
         <Route path="/login" element={<Login/>} />
-
-        {/* Customer Login */}
-        <Route path="/customer/login" element={<CustomerLogin/>} />
-        <Route path="/customer/profile" element={<CustomerProfile/>} />
-
         <Route
           path="/admin"
           element={
@@ -49,6 +48,18 @@ function App() {
             </AdminRoute>
           }
         />
+
+        {/* Customer Login */}
+        <Route path="/customer/login" element={
+          <SessionProvider>
+            <CustomerLogin/>
+          </SessionProvider>
+        } />
+        <Route path="/customer/profile" element={
+          <SessionProvider>
+            <CustomerProfile/>
+          </SessionProvider>
+        } />
       </Routes>
     </BrowserRouter>
   );

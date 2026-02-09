@@ -3,6 +3,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.customer import Customer
+from app.models.session import CustomerSession
+from app.models.selection import Selection
 from app.schemas.auth import Token
 from app.schemas.customer import CustomerCreate, CustomerResponse, CustomerUpdate
 from app.core.security import verify_password, create_access_token
@@ -33,6 +35,7 @@ async def signup_customer(
 @router.post("/login", response_model=Token)
 async def login_customer(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    session_id: str | None = None,
     db: Session = Depends(get_db)
 ):
     customer = customer_crud.get_customer_by_email(db, form_data.username)
@@ -49,6 +52,23 @@ async def login_customer(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Customer account is inactive",
         )
+    
+    #link current session to customer if session_id is provided
+    if session_id:
+        session = db.query(CustomerSession).filter(CustomerSession.session_id == session_id).first()
+
+        if session and not session.customer_id:
+            session.customer_id = customer.id
+            db.commit()
+
+            #also update any selections (cart) linked to this session
+            selections = db.query(Selection).filter(Selection.session_id == session_id,
+                                                    Selection.customer_id == None).all()
+            
+            for selection in selections:
+                selection.customer_id = customer.id
+                
+            db.commit()
     
     access_token = create_access_token(data={"sub": customer.email, "type": "customer"})
     return {"access_token": access_token, "token_type": "bearer"}

@@ -1,15 +1,18 @@
 // src/routes/customer/LandingPage.jsx
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import RestaurantCard from "../../components/RestaurantCard";
 import BottomNav from "../../components/BottomNav";
 import LanguageSelector from "../../components/LanguageSelector";
 import TranslatedText from "../../components/TranslatedText";
 import { useLanguage } from "../../context/LanguageContext";
+import { useCustomerAuth } from "../../context/CustomerAuthContext";
 import api from "../../api";
 
 export default function LandingPage() {
   const { tSync } = useLanguage();
+  const {customer} = useCustomerAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,51 +70,54 @@ export default function LandingPage() {
         }}>
 
           {/* Top Right Controls */}
-<div style={{
-  display: 'flex',
-  justifyContent: 'flex-end',
-  alignItems: 'center',
-  gap: '12px',
-  marginBottom: '16px'
-}}>
-  <LanguageSelector variant="compact" />
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '16px'
+          }}>
+            <LanguageSelector variant="compact" />
 
-  {/* Profile Button */}
-  <button
-    onClick={() => window.location.href = '/customer/profile'}
-    style={{
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      padding: '8px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="white"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-      <circle cx="12" cy="7" r="4"></circle>
-    </svg>
-  </button>
-</div>
-
+            {/* Profile Button - NOW AUTH-AWARE */}
+            <button
+              onClick={() => window.location.href = customer ? '/customer/profile' : '/customer/login'}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                padding: '8px 12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              {customer ? customer.name : 'Login'}
+            </button>
+          </div>
 
           <div style={{ 
             display: 'flex', 
             justifyContent: 'center', 
             marginBottom: '-5px' 
-          
           }}>
             <img 
               src={logoBase64}
@@ -125,7 +131,6 @@ export default function LandingPage() {
             />
           </div>
 
-      
           <h1 style={{
             color: 'white',
             fontSize: '28px',

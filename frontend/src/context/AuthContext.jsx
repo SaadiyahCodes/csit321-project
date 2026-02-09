@@ -12,9 +12,12 @@ export const AuthProvider = ({children}) => {
         try {
             const res = await api.get("/api/auth/me");
             setUser(res.data);
-        } catch {
+        } catch (err) {
+            // Silently fail if not admin (401 = customer token or no auth)
+            if (err.response?.status !== 401) {
+                console.error("Admin auth error:", err);
+            }
             setUser(null);
-            localStorage.removeItem("token");
         } finally {
             setLoading(false);
         }

@@ -101,6 +101,20 @@ def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get
     selection = selection_crud.get_selection_by_id(db, selection_id)
     if not selection or selection.session_id != session_id:
         raise HTTPException(status_code=404, detail="Selection not found")
+    
+    #link to customer if session has one
+    session = session_crud.get_session_by_id(db, session_id)
+    print(f"🔍 Finalizing - Session ID: {session_id}")
+    print(f"🔍 Session customer_id: {session.customer_id if session else 'NO SESSION'}")
+    print(f"🔍 Selection customer_id BEFORE: {selection.customer_id}")
+
+    if session and session.customer_id:
+        selection.customer_id = session.customer_id
+        db.commit()
+        db.refresh(selection)
+        print(f"🔍 Selection customer_id AFTER: {selection.customer_id}")
+    else:
+        print(f"❌ NOT LINKING - Session has no customer_id")
 
     try:
         selection_crud.finalize_selection(db, selection)

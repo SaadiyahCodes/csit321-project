@@ -2,18 +2,20 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api";
+import { useCustomerAuth } from "./CustomerAuthContext";
 
 export const SessionContext = createContext(null);
 
 export function SessionProvider({ children }) {
   const { restaurantId } = useParams();
+  const {customer} = useCustomerAuth();
   const [sessionId, setSessionId] = useState(null);
   const [selectionId, setSelectionId] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     initializeSession();
-  }, [restaurantId]);
+  }, [restaurantId, customer?.id]);
 
   const initializeSession = async () => {
     if (!restaurantId) {
@@ -24,6 +26,16 @@ export function SessionProvider({ children }) {
     try {
       // Get or create session_id from localStorage
       let storedSessionId = localStorage.getItem(`session_${restaurantId}`);
+
+      //clear old session if customer changed
+      const storedCustomerId = sessionStorage.getItem('last_customer_id');
+      if (customer?.id && storedCustomerId && customer.id !== parseInt(storedCustomerId)) {
+        // Customer changed - clear this restaurant's session
+        localStorage.removeItem(`session_${restaurantId}`);
+        storedSessionId = null;
+      }
+      // Track current customer
+      sessionStorage.setItem('last_customer_id', customer?.id || '');
       
       if (!storedSessionId) {
         // Generate new session ID (you can use UUID library or simple timestamp)
@@ -35,6 +47,7 @@ export function SessionProvider({ children }) {
       const sessionResponse = await api.post("/api/sessions/", {
         session_id: storedSessionId,
         restaurant_id: parseInt(restaurantId),
+        customer_id: customer?.id || null,
         language: "en"
       });
 

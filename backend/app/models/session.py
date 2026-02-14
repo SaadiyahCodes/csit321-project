@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import JSONB
 from app.db.base import Base
 
 # Model for customer sessions
@@ -12,6 +13,7 @@ class CustomerSession(Base):
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     language = Column(String, default="en", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    allergen_preferences = Column(JSONB)  # {"allergens": ["dairy", "peanuts"]}
 
     # Relationships
     restaurant = relationship("Restaurant")

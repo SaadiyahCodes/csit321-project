@@ -20,6 +20,7 @@ class Selection(Base):
     status = Column(Enum(SelectionStatus), default=SelectionStatus.PENDING, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     finalized_at = Column(DateTime(timezone=True), nullable=True)
+    redeemed_at = Column(DateTime, nullable=True)
 
     # Relationships
     session = relationship("CustomerSession", back_populates="selections")

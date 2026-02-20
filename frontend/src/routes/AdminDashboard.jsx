@@ -1,6 +1,7 @@
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, Filter, Search } from 'lucide-react';
+import { Plus, LogOut, Filter, Search, BarChart3 } from 'lucide-react';
 import api from "../api";
 import MenuItemCard from "../components/MenuItemCard";
 import MenuItemForm from "../components/MenuItemForm";
@@ -18,6 +19,7 @@ const apiCalls = {
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate(); 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +162,29 @@ export default function AdminDashboard() {
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button
+              onClick={() => navigate('/admin/analytics')}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#4f46e5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#4338ca'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f46e5'}
+            >
+              <BarChart3 size={16} />
+              Analytics
+            </button>
+          
             <div style={{ textAlign: 'right' }}>
               <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: '#999', textTransform: 'uppercase' }}>
                 Logged in as

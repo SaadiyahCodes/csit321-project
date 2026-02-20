@@ -5,6 +5,7 @@ import {BrowserRouter, Routes, Route} from "react-router-dom";
 import Login from './routes/Login';
 import AdminDashboard from './routes/AdminDashboard';
 import AdminRoute from './routes/AdminRoute';
+import AdminAnalytics from './routes/AdminAnalytics';
 import LandingPage from './routes/customer/LandingPage';
 import MenuPage from './routes/customer/MenuPage';
 import DishPreviewPage from './routes/customer/DishPreviewPage';
@@ -45,6 +46,14 @@ function App() {
           element={
             <AdminRoute>
               <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <AdminRoute>
+              <AdminAnalytics />
             </AdminRoute>
           }
         />

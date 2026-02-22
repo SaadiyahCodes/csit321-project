@@ -25,7 +25,12 @@ app = FastAPI(title="Gusto API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "https://gusto-ae.onrender.com", "https://gusto-ae.vercel.app/", "https://gusto-ae-saadiyahcodes-projects.vercel.app/"],
+    allow_origins=[
+    "http://localhost:5173",
+    "https://gusto-ae.onrender.com",
+    "https://gusto-ae.vercel.app",
+    "https://gusto-ae-saadiyahcodes-projects.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

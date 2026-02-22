@@ -1,3 +1,13 @@
+import base64, os, tempfile
+
+if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
+    creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_BASE64")).decode()
+    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+    tmp.write(creds_json)
+    tmp.close()
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import engine
@@ -7,14 +17,6 @@ from app.routers import (
     chatbot, translation, menu_search, voice,
     customer_auth, customer_profile, customer_orders, analytics
 )
-import base64, os, tempfile
-
-if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
-    creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_BASE64")).decode()
-    tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
-    tmp.write(creds_json)
-    tmp.close()
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
 
 # Create tables
 Base.metadata.create_all(bind=engine)

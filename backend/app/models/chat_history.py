@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Enum
 from sqlalchemy.sql import func
 from app.db.base import Base
 import enum
+from sqlalchemy.dialects.postgresql import JSONB
 
 class IntentType(str, enum.Enum):
     INQUIRY = "inquiry"
@@ -16,4 +17,5 @@ class ChatHistory(Base):
     role = Column(String(20), nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
     intent = Column(Enum(IntentType), nullable=True)
+    extracted_allergens = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

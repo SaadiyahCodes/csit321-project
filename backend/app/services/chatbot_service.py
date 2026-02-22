@@ -128,6 +128,7 @@ class ChatbotService:
             system_prompt = self.get_system_prompt(menu_items, user_allergies)
 
             extracted = self.extract_keywords_and_preferences(message)
+            print(f"🧪 Raw extracted: {extracted}")
 
             # Merge allergies (user profile + message-based)
             all_allergies = list(set((user_allergies or []) + extracted.get("allergies", [])))

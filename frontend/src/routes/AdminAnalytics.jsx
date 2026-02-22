@@ -2,8 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminAnalytics() {
+  const { user, loading: authLoading } = useAuth();
+  console.log('Auth state:', { user, authLoading, restaurant_id: user?.restaurant_id });
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,14 +14,23 @@ export default function AdminAnalytics() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetchAnalytics();
-  }, [dateRange]);
+    if (!authLoading && user?.restaurant_id) {
+      fetchAnalytics();
+    } else if (!authLoading && !user?.restaurant_id) {
+      setError('No restaurant associated with this account');
+      setLoading(false);
+    }
+  }, [dateRange, authLoading, user]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
       setError(null);
-      const restaurantId = 1; 
+      const restaurantId = user?.restaurant_id;
+      if (!restaurantId) {
+        setError('No restaurant associated with this account');
+        return;
+      }
       const result = await analyticsService.getDashboard(restaurantId, dateRange);
       setData(result);
     } catch (err) {
@@ -88,11 +100,12 @@ export default function AdminAnalytics() {
 
       {/* Header */}
       <div style={{
-  background: '#fff',
-  borderBottom: '1px solid #F3F4F6',
-  boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
-  flexShrink: 0
-}}>
+        background: '#fff',
+        borderBottom: '1px solid #F3F4F6',
+        boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
+        flexShrink: 0
+        }}
+      >
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 64 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button
@@ -202,6 +215,7 @@ export default function AdminAnalytics() {
             icon="💰"
             accent="#FBBF24"
           />
+          {/*<KPICard title="Orders from Chatbot" value={`${data?.kpi?.chatbot_order_count || 0}`} icon="🛒" accent="#F59E0B" />*/}
         </div>
 
         {/* Charts Row */}

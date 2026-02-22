@@ -17,7 +17,7 @@ class AnalyticsService:
     def get_kpi_metrics(self, restaurant_id: int, days: int = 7):
         """Calculate KPI cards data"""
         
-        start_date = datetime.now() - timedelta(days=days)
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
         
         # 1. Total conversations
         total_convs = self.db.query(
@@ -39,7 +39,17 @@ class AnalyticsService:
         ).scalar() or 0
         
         # 3. Conversion rate
-        conversion = (total_orders / total_convs * 100) if total_convs > 0 else 0
+        total_sessions = self.db.query(
+            func.count(CustomerSession.session_id)
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            CustomerSession.created_at >= start_date
+        ).scalar() or 0
+
+        #logs
+        print(f"🔍 Sessions: {total_sessions}, Orders: {total_orders}, Convs: {total_convs}")
+
+        conversion = (total_orders / total_sessions * 100) if total_sessions > 0 else 0
         
         # 4. Average order value
         subquery = self.db.query(
@@ -64,6 +74,16 @@ class AnalyticsService:
         
         # 6. Upsell revenue
         upsell_revenue = 0  # Placeholder
+
+        # 7. Orders originating from chatbot
+        chatbot_order_count = self.db.query(
+            func.count(ChatbotOrder.id)
+        ).join(
+            CustomerSession, CustomerSession.session_id == ChatbotOrder.session_id
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            ChatbotOrder.confirmed_at >= start_date
+        ).scalar() or 0
         
         return {
             "total_conversations": total_convs,
@@ -72,15 +92,16 @@ class AnalyticsService:
             "chatbot_aov": round(float(chatbot_aov), 2),
             "manual_aov": manual_aov,
             "aov_increase_percent": round(((chatbot_aov - manual_aov) / manual_aov) * 100, 1) if manual_aov > 0 else 0,
-            "upsell_revenue": round(upsell_revenue, 2)
+            "upsell_revenue": round(upsell_revenue, 2),
+            "chatbot_order_count": chatbot_order_count
         }
     
     def get_top_questions(self, restaurant_id: int, days: int = 7):
         """Extract most common questions"""
         
-        start_date = datetime.now() - timedelta(days=days)
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
         
-        messages = self.db.query(ChatHistory.content).join(
+        messages = self.db.query(ChatHistory.content, ChatHistory.extracted_allergens).join(
             CustomerSession, CustomerSession.session_id == ChatHistory.session_id
         ).filter(
             CustomerSession.restaurant_id == restaurant_id,
@@ -97,33 +118,38 @@ class AnalyticsService:
             "Is this gluten-free?": 0,
         }
         
-        for (msg,) in messages:
-            lower = msg.lower()
+        for content, extracted_allergens in messages:
+            lower = content.lower()
+            
+            # Use AI-extracted allergens for dairy/nuts/gluten — avoids false positives
+            allergens = extracted_allergens or []
+            if any(a in allergens for a in ["dairy", "milk", "lactose"]):
+                categories["Does this have dairy?"] += 1
+            if any(a in allergens for a in ["nuts", "peanut", "peanuts", "tree nuts"]):
+                categories["Does this have nuts?"] += 1
+            if any(a in allergens for a in ["gluten", "wheat"]):
+                categories["Is this gluten-free?"] += 1
+                        
+            # Keep keyword matching for non-allergen questions where false positives are unlikely
             if "spicy" in lower or "spice" in lower:
                 categories["Is this spicy?"] += 1
-            if "dairy" in lower or "milk" in lower:
-                categories["Does this have dairy?"] += 1
-            if "nut" in lower or "peanut" in lower:
-                categories["Does this have nuts?"] += 1
             if "vegetarian" in lower or "vegan" in lower:
                 categories["Is this vegetarian?"] += 1
             if "size" in lower or "portion" in lower:
                 categories["What's the portion size?"] += 1
-            if "gluten" in lower:
-                categories["Is this gluten-free?"] += 1
-        
+            
         sorted_q = sorted(categories.items(), key=lambda x: x[1], reverse=True)
         return [{"question": q, "count": c} for q, c in sorted_q if c > 0]
     
     def get_conversation_timeline(self, restaurant_id: int, days: int = 7):
         """Daily conversation and order counts"""
         
-        start_date = datetime.now() - timedelta(days=days)
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         timeline = []
         
         for i in range(days):
-            date = start_date + timedelta(days=i)
-            date_start = date.replace(hour=0, minute=0, second=0, microsecond=0)
+            date = today - timedelta(days=days - 1 - i)
+            date_start = date
             date_end = date.replace(hour=23, minute=59, second=59, microsecond=999999)
             
             convs = self.db.query(
@@ -156,7 +182,7 @@ class AnalyticsService:
     def get_language_distribution(self, restaurant_id: int, days: int = 7):
         """Language usage stats"""
         
-        start_date = datetime.now() - timedelta(days=days)
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
         
         lang_counts = self.db.query(
             CustomerSession.language,

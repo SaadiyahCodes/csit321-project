@@ -37,9 +37,13 @@ export default function MenuPage() {
   }, [activeCategory, menuItems]);
 
   const onAR = (item) => {
-    if (!item.ar_model_url) return alert("AR model not available for this item.");
-    setPreviewItem(item);
+    if (!item.ar_model_url) {
+      alert("AR model not available for this item.");
+      return;
+    }
+    navigate(`/ar?model=${encodeURIComponent(item.ar_model_url)}`);
   };
+
 
   // when a card is clicked, go to dish preview page
   const onOpenDish = (item) => {

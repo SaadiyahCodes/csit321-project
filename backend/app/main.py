@@ -1,12 +1,3 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.db.database import engine
-from app.db.base import Base
-from app.routers import (
-    auth, admin, menu, restaurant, session, selection, 
-    chatbot, translation, menu_search, voice,
-    customer_auth, customer_profile, customer_orders, analytics
-)
 import base64, os, tempfile
 
 if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
@@ -16,6 +7,17 @@ if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
     tmp.close()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
 
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.db.database import engine
+from app.db.base import Base
+from app.routers import (
+    auth, admin, menu, restaurant, session, selection, 
+    chatbot, translation, menu_search, voice,
+    customer_auth, customer_profile, customer_orders, analytics
+)
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -23,7 +25,12 @@ app = FastAPI(title="Gusto API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+    "http://localhost:5173",
+    "https://gusto-ae.onrender.com",
+    "https://gusto-ae.vercel.app",
+    "https://gusto-ae-saadiyahcodes-projects.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

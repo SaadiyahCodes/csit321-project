@@ -30,6 +30,8 @@ app.add_middleware(
     "https://gusto-ae.onrender.com",
     "https://gusto-ae.vercel.app",
     "https://gusto-ae-saadiyahcodes-projects.vercel.app",
+    # "*",
+    # "http://192.168.x.x:5173"
     ],
     allow_credentials=True,
     allow_methods=["*"],

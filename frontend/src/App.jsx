@@ -15,6 +15,7 @@ import OrderSummaryPage from './routes/customer/OrderSummaryPage';
 import CustomerLogin from './routes/customer/CustomerLogin';
 import CustomerProfile from './routes/customer/CustomerProfile';
 import { SessionProvider } from './context/SessionContext';
+import ARViewer from './ar/ARViewer';
 
 function App() {
   return (
@@ -25,7 +26,7 @@ function App() {
             <LandingPage/>
           </SessionProvider>
         } />
-        
+        <Route path="/ar" element={<ARViewer />} />
         {/* Wrap restaurant routes with SessionProvider */}
         <Route path="/restaurant/:restaurantId/*" element={
           <SessionProvider>

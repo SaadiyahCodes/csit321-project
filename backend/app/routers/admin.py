@@ -9,6 +9,14 @@ from app.schemas.menu import MenuItemResponse, MenuItemCreate, MenuItemUpdate
 from app.crud import restaurant as restaurant_crud
 from app.crud import menu as menu_crud
 
+# AR Model Validator
+def validate_ar_model_url(ar_model_url: str | None):
+    if ar_model_url and not ar_model_url.endswith(".glb"):
+        raise HTTPException(
+            status_code=400,
+            detail="AR model URL must end with .glb"
+        )
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 @router.get("/dashboard")
@@ -90,6 +98,7 @@ def create_my_menu_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
+    validate_ar_model_url(item.ar_model_url)
     """Create a new menu item for the admin's restaurant"""
     #Note: restaurant_id in MenuItemCreate will be overridden with admin's restaurant_id
     created_item = menu_crud.create_admin_menu_item(db, item, current_user)
@@ -107,6 +116,7 @@ def update_my_menu_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_admin_user)
 ):
+    validate_ar_model_url(data.ar_model_url)
     """Update a menu item (only if it belongs to admin's restaurant)"""
     item = menu_crud.update_admin_menu_item(db, item_id, data, current_user)
     

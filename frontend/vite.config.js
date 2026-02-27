@@ -7,5 +7,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true, // Fail if port is already in use
+    allowedHosts: [
+      "my-mentholated-exteriorly.ngrok-free.dev",
+    ]
   }
 })

@@ -2,7 +2,7 @@ export default function MenuCard({ item, onAR, onOpen }) {
   return (
     <div
       onClick={() => onOpen(item)}
-      className="cursor-pointer text-left bg-white rounded-[28px] overflow-hidden shadow-sm w-full"
+      className="cursor-pointer text-left bg-white rounded-[28px] overflow-hidden shadow-sm w-full transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
       role="button"
       tabIndex={0}
     >
@@ -11,12 +11,12 @@ export default function MenuCard({ item, onAR, onOpen }) {
           <img
             src={item.image_url}
             alt={item.name}
-            className="w-full h-44 sm:h-48 object-cover"
+            className="w-full h-44 sm:h-48 object-cover transition-transform duration-300 hover:scale-105"
           />
         </div>
 
         <div className="mt-3 flex items-start justify-between gap-3">
-          <div>
+          <div className="flex-1">
             <h3 className="text-[18px] font-extrabold text-gray-900 leading-tight">
               {item.name}
             </h3>
@@ -30,7 +30,15 @@ export default function MenuCard({ item, onAR, onOpen }) {
           </span>
           */}
         </div>
-
+        {/* Price Display */}
+        {item.price && (
+          <div className="mt-2">
+            <span className="text-lg font-bold text-yellow-600">
+              {item.price.toFixed(2)} AED
+            </span>
+          </div>
+        )}
+        
         <div className="mt-2 flex items-center justify-end">
           <button
             type="button"

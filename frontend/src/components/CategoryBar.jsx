@@ -19,20 +19,23 @@ export default function CategoryBar({ active, onChange }) {
           <button
             key={c.id}
             onClick={() => onChange(c.id)}
-            className="flex flex-col items-center gap-2 transition-transform active:scale-95"
-
+            className="flex flex-col items-center gap-2 transition-all duration-300 active:scale-95 hover:scale-110 hover:-translate-y-1"
           >
             <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                isActive ? "bg-yellow-300" : "bg-orange-100"
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                isActive 
+                  ? "bg-yellow-300 shadow-lg" 
+                  : "bg-orange-100 hover:bg-yellow-200 hover:shadow-md"
               }`}
             >
               <Icon
                 size={22}
-                className={isActive ? "text-orange-700" : "text-orange-600"}
+                className={`transition-transform duration-300 ${
+                  isActive ? "text-orange-700" : "text-orange-600 hover:scale-110"
+                }`}
               />
             </div>
-            <span className="text-xs text-white">{c.label}</span>
+            <span className="text-xs text-white font-medium">{c.label}</span>
           </button>
         );
       })}

@@ -15,6 +15,7 @@ export default function LandingPage() {
   const {customer} = useCustomerAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
+  const [showAbout, setShowAbout] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeNav, setActiveNav] = useState("home");
@@ -51,8 +52,7 @@ export default function LandingPage() {
 
   return (
     <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f3f4f6',
+      minHeight: '100vh',
       display: 'flex',
       justifyContent: 'center',
       paddingBottom: '80px'
@@ -77,6 +77,29 @@ export default function LandingPage() {
             gap: '12px',
             marginBottom: '16px'
           }}>
+            <button
+            onClick={() => setShowAbout(true)}
+            style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            padding: '8px',
+            width: '36px',
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '18px',
+            fontWeight: 'bold'
+    }}
+  >
+    ℹ
+  </button>
+
+
+
             <LanguageSelector variant="compact" />
 
             {/* Profile Button - NOW AUTH-AWARE */}
@@ -193,9 +216,84 @@ export default function LandingPage() {
             </div>
           </div>
         </main>
+{/* CONTACT FOOTER */}
+<div style={{
+  textAlign: 'center',
+  marginTop: '30px',
+  marginBottom: '20px',
+  fontSize: '13px',
+  color: '#777'
+}}>
+  Contact us:{" "}
+  <span
+  style={{
+    color: '#f97316',
+    fontWeight: '500'
+  }}
+>
+  support@gusto.com
+</span>
+
+      </div>
       </div>
 
       {/* BOTTOM NAV */}
+
+      {showAbout && (
+  <div
+    onClick={() => setShowAbout(false)}
+    style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        backgroundColor: 'white',
+        padding: '32px',
+        borderRadius: '16px',
+        maxWidth: '500px',
+        width: '90%',
+        textAlign: 'center'
+      }}
+    >
+      <h2 style={{ fontSize: '22px', fontWeight: 'bold', marginBottom: '16px' }}>
+        About Gusto
+      </h2>
+
+      <p style={{ fontSize: '15px', color: '#555', lineHeight: '1.6' }}>
+        Gusto is an AI-powered multilingual restaurant assistant designed to make dining accessible for everyone.
+        Order food in your native language, view AR previews of dishes, and get instant answers about ingredients and allergens.
+      </p>
+
+      <button
+        onClick={() => setShowAbout(false)}
+        style={{
+          marginTop: '24px',
+          padding: '10px 20px',
+          backgroundColor: '#f97316',
+          border: 'none',
+          borderRadius: '8px',
+          color: 'white',
+          cursor: 'pointer',
+          fontWeight: '500'
+        }}
+      >
+        back
+      </button>
+    </div>
+  </div>
+)}
       <div className="fixed bottom-0 left-0 right-0">
         <BottomNav active={activeNav} onChange={setActiveNav} />
       </div>

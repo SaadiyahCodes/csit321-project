@@ -5,6 +5,8 @@ from app.services.chatbot_service import chatbot_service
 from app.services.translation_service import translation_service
 from app.crud import session as session_crud
 from app.crud import selection as selection_crud
+from app.models.chat_history import ChatHistory, IntentType
+from app.models.chatbot_order import ChatbotOrder
 
 class ChatHandler:
     """Shared logic for text and voice chat"""
@@ -113,14 +115,61 @@ class ChatHandler:
                         notes="Added by chatbot"
                     )
                     items_added.append(item['name'])
-                
+
+                    # Track chatbot-originated orders separately for analytics
+                    chatbot_order = ChatbotOrder(
+                        session_id=session_id,
+                        menu_item_id=item["id"],
+                        quantity=1,
+                        notes="Added by chatbot"
+                    )
+                    db.add(chatbot_order)
+                db.commit()
                 print(f"✅ Auto-added {len(items_added)} items to cart")
                 
             except Exception as e:
                 print(f"⚠️ Failed to auto-add to cart: {e}")
                 # Don't fail the whole request, just log it
         
-        # ===== 6. RETURN COMPLETE RESULT =====
+        # ===== 6. RETURN COMPLETE RESULT & SAVE TO DB =====
+
+        try:
+            # Map intent type string to enum, fallback to GENERAL
+            intent_type_map = {
+                "order_confirmation": IntentType.ORDER_CONFIRMATION,
+                "menu_inquiry": IntentType.INQUIRY,
+                "order_intent": IntentType.INQUIRY,
+            }
+            intent_str = result.get("intent", {}).get("type", "general")
+            intent_enum = intent_type_map.get(intent_str, IntentType.GENERAL)
+
+            print(f"🧪 Extracted preferences: {result.get('extracted_preferences')}")
+
+            # Save user message in English
+            user_msg = ChatHistory(
+                session_id=session_id,
+                role="user",
+                content=message_to_process,
+                intent=intent_enum,
+                extracted_allergens=result.get("extracted_preferences", {}).get("allergies") or None
+            )
+            db.add(user_msg)
+
+            # Save assistant response in English
+            assistant_msg = ChatHistory(
+                session_id=session_id,
+                role="assistant",
+                content=result["response"],  # translated response
+                intent=None
+            )
+            db.add(assistant_msg)
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"⚠️ Failed to save chat history to DB: {e}")
+            #Request will not be failed, analytics data loss is non-critical
+
         return {
             "response": response_text,
             "intent": result["intent"],

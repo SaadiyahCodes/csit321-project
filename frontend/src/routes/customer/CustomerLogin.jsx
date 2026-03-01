@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {useNavigate} from 'react-router-dom';
 import {useCustomerAuth} from '../../context/CustomerAuthContext';
 import {useSession} from '../../context/SessionContext';
+import gustoLogo from '../../assets/gusto-logo1.png';
 
 const CustomerLogin = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -69,11 +70,29 @@ const CustomerLogin = () => {
       <div style={{
         background: 'white',
         borderRadius: '20px',
-        padding: '60px 80px',
-        maxWidth: '500px',
+        padding: '40px 40px',
+        maxWidth: '420px',
         width: '100%',
         boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
       }}>
+
+        {/* LOGO - ADD THIS SECTION */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          marginBottom: '-10px'
+        }}>
+          <img 
+            src={gustoLogo}
+            alt="Gusto Logo"
+            style={{
+              width: '500px',
+             
+              objectFit: 'contain'
+            }}
+          />
+        </div>
+
         {/* Welcome Header */}
         <h1 style={{
           fontSize: '32px',

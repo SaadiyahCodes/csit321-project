@@ -20,6 +20,7 @@ class UserResponse(UserBase):
     id: int
     is_admin: bool
     is_active: bool
+    restaurant_id: Optional[int] = None
     created_at: datetime
 
     class Config:

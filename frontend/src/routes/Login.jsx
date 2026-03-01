@@ -1,7 +1,8 @@
 // src/routes/Login.jsx
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import logo from "../assets/gusto-logo1.png";
 
 export default function Login() {
     const {login} = useAuth();
@@ -36,6 +37,15 @@ export default function Login() {
             <div className="absolute bottom-0 right-0 w-96 h-96 bg-yellow-300 opacity-40 rounded-full blur-3xl"></div>
 
             <div className="relative w-full max-w-md bg-white rounded-3xl shadow-xl p-8 mx-4 z-10">
+                {/* Logo */}
+                <div className="flex justify-center mb-6">
+                    <img 
+                        src={logo} 
+                        alt="Gusto Logo" 
+                        className="h-24 w-auto"
+                    />
+                </div>
+
                 <h2 className="text-center text-2xl font-semibold text-gray-800 mb-2">Welcome Back</h2>
                 <p className="text-center text-sm text-gray-600 mb-6">
                     Sign in to your restaurant admin portal

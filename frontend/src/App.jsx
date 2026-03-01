@@ -5,6 +5,7 @@ import {BrowserRouter, Routes, Route} from "react-router-dom";
 import Login from './routes/Login';
 import AdminDashboard from './routes/AdminDashboard';
 import AdminRoute from './routes/AdminRoute';
+import AdminAnalytics from './routes/AdminAnalytics';
 import LandingPage from './routes/customer/LandingPage';
 import MenuPage from './routes/customer/MenuPage';
 import DishPreviewPage from './routes/customer/DishPreviewPage';
@@ -14,6 +15,7 @@ import OrderSummaryPage from './routes/customer/OrderSummaryPage';
 import CustomerLogin from './routes/customer/CustomerLogin';
 import CustomerProfile from './routes/customer/CustomerProfile';
 import { SessionProvider } from './context/SessionContext';
+import ARViewer from './ar/ARViewer';
 
 function App() {
   return (
@@ -24,7 +26,7 @@ function App() {
             <LandingPage/>
           </SessionProvider>
         } />
-        
+        <Route path="/ar" element={<ARViewer />} />
         {/* Wrap restaurant routes with SessionProvider */}
         <Route path="/restaurant/:restaurantId/*" element={
           <SessionProvider>
@@ -45,6 +47,14 @@ function App() {
           element={
             <AdminRoute>
               <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <AdminRoute>
+              <AdminAnalytics />
             </AdminRoute>
           }
         />

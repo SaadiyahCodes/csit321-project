@@ -1,5 +1,5 @@
 // src/routes/customer/OrderSummaryPage.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import BottomNav from "../../components/BottomNav";
@@ -17,13 +17,15 @@ export default function OrderSummaryPage() {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
+  const hasFinalizedRef = useRef(false);
 
   useEffect(() => {
-    if (selectionId && sessionId) {
+    if (selectionId && sessionId && !hasFinalizedRef.current) {
+      hasFinalizedRef.current = true;
       finalizeOrder();
     }
   }, [selectionId, sessionId]);
-
+  
   const finalizeOrder = async () => {
     setFinalizing(true);
     

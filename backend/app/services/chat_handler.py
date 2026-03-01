@@ -50,7 +50,8 @@ class ChatHandler:
             translation_result = translation_service.translate_text(
                 text=message,
                 target_lang="en",
-                source_lang=language
+                source_lang=language,
+                use_gemini=False
             )
             
             if translation_result.get("success"):
@@ -85,7 +86,8 @@ class ChatHandler:
             translation_result = translation_service.translate_text(
                 text=response_text,
                 target_lang=language,
-                source_lang="en"
+                source_lang="en",
+                use_gemini=True
             )
             
             if translation_result.get("success"):

@@ -87,7 +87,7 @@ class ChatbotService:
     4. ⚠️ NEVER say "I have added" or "Added to cart" - You are RECOMMENDING, not adding directly!
     5. After recommendation, ALWAYS ask: "Would you like me to add this to your order?"
     6. Be concise - keep responses under 3 sentences unless asked for details
-    7. Use emojis sparingly (1-2 per message max)
+    7. NEVER use emojis in responses (they interfere with voice output)
 
     CONVERSATION FLOW:
     - Customer asks about food → Recommend dishes from the menu
@@ -98,8 +98,12 @@ class ChatbotService:
     Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself!"""
     
     def _cache_key(self, message: str, restaurant_id: int, allergies: List[str]) -> str:
-        """Generate cache key for chatbot responses"""
-        key_data = f"{message.lower()}:{restaurant_id}:{sorted(allergies or [])}"
+        """Generate cache key - normalized"""
+        # Remove punctuation, extra spaces
+        normalized = re.sub(r'[^\w\s]', '', message.lower()).strip()
+        normalized = ' '.join(normalized.split())  # Remove extra spaces
+        
+        key_data = f"{normalized}:{restaurant_id}:{sorted(allergies or [])}"
         return hashlib.md5(key_data.encode()).hexdigest()
     
     
@@ -179,7 +183,11 @@ class ChatbotService:
             # Get AI response
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=full_context
+                contents=full_context,
+                generation_config={
+                    'temperature': 0,
+                    'max_output_tokens': 150
+                }
             )
             ai_message = response.text.strip()            
             

@@ -23,15 +23,19 @@ export default function MenuPage() {
 
   useEffect(() => {
     fetchMenuItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurantId, language]);
 
   const fetchMenuItems = async () => {
     setLoading(true);
-    const restaurantRes = await api.get(`/api/restaurants/${restaurantId}`);
-    setRestaurantName(restaurantRes.data.name);
     try {
-      if (language !== 'en') {
-        const response = await api.get(`/api/translate/menu/${restaurantId}/${language}`);
+      const restaurantRes = await api.get(`/api/restaurants/${restaurantId}`);
+      setRestaurantName(restaurantRes.data.name);
+
+      if (language !== "en") {
+        const response = await api.get(
+          `/api/translate/menu/${restaurantId}/${language}`
+        );
         console.log("🔍 Translated menu response:", response.data);
         setMenuItems(response.data.items);
       } else {
@@ -39,9 +43,9 @@ export default function MenuPage() {
         console.log("🔍 Original menu response:", response.data);
         setMenuItems(response.data);
       }
-      setLoading(false);
     } catch (err) {
       console.error("Error fetching menu:", err);
+    } finally {
       setLoading(false);
     }
   };
@@ -75,15 +79,28 @@ export default function MenuPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-4">
         {/* Top Bar with Language Selector */}
-        <div className="rounded-3xl bg-yellow-300 flex items-center justify-between px-6" style={{ paddingTop: '20px', paddingBottom: '28px' }}>
+        <div
+          className="rounded-3xl flex items-center justify-between px-6 shadow-sm"
+          style={{
+            paddingTop: "20px",
+            paddingBottom: "28px",
+            backgroundColor: "#fbbf24", // solid (no fade)
+          }}
+        >
           <div style={{ flex: 1 }}></div>
-          <h1 className="text-lg sm:text-xl font-bold text-gray-900" style={{ flex: 2, textAlign: 'center' }}>
+
+          <h1
+            className="text-lg sm:text-xl font-bold text-gray-900"
+            style={{ flex: 2, textAlign: "center" }}
+          >
             {restaurantName ? `${restaurantName} - Menu` : "Menu"}
           </h1>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+
+          <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
             <LanguageSelector variant="compact" />
+          </div>
         </div>
-      </div>
+
         <div className="mt-3">
           <CategoryBar active={activeCategory} onChange={setActiveCategory} />
         </div>
@@ -103,18 +120,15 @@ export default function MenuPage() {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0">
-        <BottomNav 
-          active={activeNav} 
+        <BottomNav
+          active={activeNav}
           onChange={setActiveNav}
           onChatToggle={() => setIsChatOpen(!isChatOpen)}
         />
       </div>
 
       {/* Chatbot Component */}
-      <Chatbot 
-        isOpen={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
-      />
+      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

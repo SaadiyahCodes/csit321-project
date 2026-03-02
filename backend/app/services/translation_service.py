@@ -1,7 +1,10 @@
 # app/services/translation_service.py
 
+from xmlrpc import client
+
+from click import prompt
 from google.cloud import translate_v2 as translate
-import google.generativeai as genai
+from google import genai
 import os
 from typing import Dict, List
 from functools import lru_cache
@@ -27,13 +30,17 @@ class TranslationService:
         # Gemini (for smart food translation)
         gemini_key = os.getenv('GEMINI_API_KEY')
         if gemini_key:
-            genai.configure(api_key=gemini_key)
+            self.client = genai.Client(
+                api_key=gemini_key,
+                http_options={"api_version": "v1"}
+            )
             print("✅ Gemini API initialized")
         else:
             print("⚠️ Gemini API key not found")
         
         # In-memory cache (your existing one - keep it!)
         self.cache = {}
+
     
     def translate_text(
         self, 
@@ -142,7 +149,11 @@ Text: {text}
 Return ONLY the translation, nothing else."""
         
         try:
-            response = genai.generate_content(prompt)
+            client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+            response = client.models.generate_content(
+                model='models/gemini-2.5-flash',
+                contents=prompt
+            )
             return response.text.strip()
             
         except Exception as e:

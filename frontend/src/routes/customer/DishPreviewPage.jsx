@@ -1,5 +1,6 @@
 // src/routes/customer/DishPreviewPage.jsx
 import { useState, useEffect } from "react";
+import { ArrowLeft } from "lucide-react"; 
 import { useNavigate, useParams } from "react-router-dom";
 import BottomNav from "../../components/BottomNav";
 import TranslatedText from "../../components/TranslatedText";
@@ -92,7 +93,7 @@ export default function DishPreviewPage() {
 
   if (loading || sessionLoading) {
     return (
-      <div className="min-h-screen bg-yellow-300 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'linear-gradient(to bottom, #fbbf24, #f59e0b)' }}>
         <div className="bg-white rounded-3xl p-6 text-center">
           <p className="font-semibold text-gray-900">
             <TranslatedText>Loading...</TranslatedText>
@@ -124,30 +125,32 @@ export default function DishPreviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-yellow-300">
-      <div className="mx-auto w-full max-w-md px-4 pt-4 pb-24">
-        {/* Header */}
-        <div className="flex items-start justify-between">
+  <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #fbbf24, #f59e0b)' }}>
+    <div className="mx-auto w-full max-w-lg px-4 pt-4 pb-24">
+      
+      {/* White sheet - NOW INCLUDES HEADER */}
+      <div className="mt-4 bg-white rounded-[32px] p-5 shadow-sm">
+        
+        {/* Header - MOVED INSIDE WHITE BOX */}
+        <div className="flex items-start gap-3 mb-4">
+          <button
+            onClick={goBackToMenu}
+            className="text-gray-900 hover:text-orange-600 transition-colors mt-1"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          
           <div>
             <h1 className="text-xl font-extrabold text-gray-900">
-              • {item.name}
+              {item.name}
             </h1>
-            <span className="inline-flex mt-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+            <span className="inline-flex mt-2 -ml-20 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               ${item.price?.toFixed(2)}
             </span>
           </div>
-
-          <button
-            onClick={goBackToMenu}
-            className="text-sm font-bold text-gray-900"
-          >
-            <TranslatedText>Back</TranslatedText>
-          </button>
         </div>
 
-        {/* White sheet */}
-        <div className="mt-4 bg-white rounded-[32px] p-5 shadow-sm">
-          <div className="flex justify-center">
+        <div className="flex justify-center">
             <div className="bg-gray-200 text-orange-600 font-extrabold rounded-full px-10 py-3 text-sm tracking-wide">
               <TranslatedText>DISH PREVIEW</TranslatedText>
             </div>

@@ -9,6 +9,8 @@ from app.models.menuitems import MenuItem
 from app.services.menu_rag import MenuRAG
 import json
 import re
+from functools import lru_cache
+import hashlib
 
 load_dotenv()
 
@@ -29,6 +31,9 @@ class ChatbotService:
         
         # Conversation memory
         self.conversations = {}
+
+        # Response cache
+        self.response_cache = {}
 
     def get_menu_items_dict(self, db: Session, restaurant_id: int) -> List[Dict]:
         """Fetch menu items from database and convert to dict format"""
@@ -92,6 +97,12 @@ class ChatbotService:
 
     Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself!"""
     
+    def _cache_key(self, message: str, restaurant_id: int, allergies: List[str]) -> str:
+        """Generate cache key for chatbot responses"""
+        key_data = f"{message.lower()}:{restaurant_id}:{sorted(allergies or [])}"
+        return hashlib.md5(key_data.encode()).hexdigest()
+    
+    
     def chat(
         self, 
         message: str, 
@@ -101,6 +112,14 @@ class ChatbotService:
         user_allergies: List[str] = None
     ) -> Dict:
         """Have a conversation with the customer using real database + RAG"""
+
+        cache_key = self._cache_key(message, restaurant_id, user_allergies or [])
+        
+        if cache_key in self.response_cache:
+            cached = self.response_cache[cache_key].copy()
+            cached['cached'] = True
+            print(f"🚀 Using cached chatbot response")
+            return cached
         
         if not self.enabled:
             return {
@@ -162,7 +181,7 @@ class ChatbotService:
                 model=self.model_name,
                 contents=full_context
             )
-            ai_message = response.text.strip()
+            ai_message = response.text.strip()            
             
             # Detect intent
             intent = self._detect_intent(message, ai_message, menu_items, history)
@@ -180,13 +199,21 @@ class ChatbotService:
             if len(history) > 20:
                 self.conversations[session_id] = history[-20:]
             
-            return {
+            result = {
                 "response": ai_message,
                 "intent": intent,
                 "session_id": session_id,
                 "extracted_preferences": extracted,
                 "error": False
             }
+
+            # Cache the response
+            if intent['type'] in ['menu_inquiry', 'order_intent']:
+                self.response_cache[cache_key] = result.copy()
+                print(f"💾 Cached response for: {message[:30]}...")
+
+
+            return result
             
         except Exception as e:
             import traceback

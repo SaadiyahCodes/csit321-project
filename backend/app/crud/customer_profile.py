@@ -1,3 +1,4 @@
+#app/crud/customer_profile.py
 from sqlalchemy.orm import Session
 from app.models.customer_profile import CustomerProfile
 from app.schemas.customer_profile import ProfileCreate, ProfileUpdate
@@ -22,7 +23,8 @@ def update_customer_profile(db: Session, customer_id: int, profile_update: Profi
     if not db_profile:
         return None
     
-    update_data = profile_update.model_dump(exclude_unset=True)
+    #Exclude customer-level fields — those are handled in the router
+    update_data = profile_update.model_dump(exclude_unset=True, exclude={"name", "phone_number"})
     for field, value in update_data.items():
         setattr(db_profile, field, value)
         

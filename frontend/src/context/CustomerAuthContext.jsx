@@ -68,7 +68,7 @@ export const CustomerAuthProvider = ({ children }) => {
     };
 
     return (
-        <CustomerAuthContext.Provider value={{ customer, login, register, logout, loading }}>
+        <CustomerAuthContext.Provider value={{ customer, login, register, logout, loading, fetchCustomer }}>
             {children}
         </CustomerAuthContext.Provider>
     );

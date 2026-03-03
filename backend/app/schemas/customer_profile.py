@@ -1,3 +1,4 @@
+#app/schemas/customer_profile.py
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -14,13 +15,19 @@ class ProfileCreate(ProfileBase):
     pass
 
 class ProfileUpdate(ProfileBase):
-    pass
+    #These are handled in the router directly on Customer, not on CustomerProfile
+    name: str | None = None
+    phone_number: str | None = None
 
 class ProfileResponse(ProfileBase):
     id: int
     customer_id: int
     created_at: datetime
     updated_at: datetime
+    #pulled from Customer relationship
+    name: str | None = None
+    email: str | None = None
+    phone_number: str | None = None
 
     class Config:
         from_attributes = True

@@ -55,7 +55,7 @@ class ChatbotService:
             for item in menu_items
         ]
     
-    def get_system_prompt(self, menu_items: List[Dict], user_allergies: List[str] = None) -> str:
+    def get_system_prompt(self, menu_items: List[Dict], user_allergies: List[str] = None, dietary_prefs: List[str] = None) -> str:
         """Create system prompt with menu context"""
         
         # Format menu for AI
@@ -68,6 +68,8 @@ class ChatbotService:
         allergy_warning = ""
         if user_allergies:
             allergy_warning = f"\n⚠️ CRITICAL: Customer is allergic to: {', '.join(user_allergies)}. NEVER recommend dishes containing these allergens!"
+        if dietary_prefs:
+            allergy_warning += f"\n⚠️ CRITICAL: Customer follows these dietary preferences: {', '.join(dietary_prefs)}. NEVER recommend dishes that violate these!"
         
         return f"""You are Gusto AI, a friendly restaurant assistant helping customers order food.
 
@@ -97,13 +99,12 @@ class ChatbotService:
 
     Remember: You SUGGEST items. The system adds them. Don't claim you've added anything yourself!"""
     
-    def _cache_key(self, message: str, restaurant_id: int, allergies: List[str]) -> str:
+    def _cache_key(self, message: str, restaurant_id: int, allergies: List[str], dietary: List[str] = None) -> str:
         """Generate cache key - normalized"""
-        # Remove punctuation, extra spaces
+        #Remove punctuation, extra spaces
         normalized = re.sub(r'[^\w\s]', '', message.lower()).strip()
-        normalized = ' '.join(normalized.split())  # Remove extra spaces
-        
-        key_data = f"{normalized}:{restaurant_id}:{sorted(allergies or [])}"
+        normalized = ' '.join(normalized.split())
+        key_data = f"{normalized}:{restaurant_id}:{sorted(allergies or [])}:{sorted(dietary or [])}"
         return hashlib.md5(key_data.encode()).hexdigest()
     
     
@@ -113,11 +114,12 @@ class ChatbotService:
         session_id: str,
         db: Session,
         restaurant_id: int,
-        user_allergies: List[str] = None
+        user_allergies: List[str] = None,
+        dietary_prefs: List[str] = None
     ) -> Dict:
         """Have a conversation with the customer using real database + RAG"""
 
-        cache_key = self._cache_key(message, restaurant_id, user_allergies or [])
+        cache_key = self._cache_key(message, restaurant_id, user_allergies or [], dietary_prefs or [])
         
         if cache_key in self.response_cache:
             cached = self.response_cache[cache_key].copy()
@@ -148,7 +150,7 @@ class ChatbotService:
             history = self.conversations[session_id]
             
             # Build conversation context
-            system_prompt = self.get_system_prompt(menu_items, user_allergies)
+            system_prompt = self.get_system_prompt(menu_items, user_allergies, dietary_prefs)
 
             extracted = self.extract_keywords_and_preferences(message)
             print(f"🧪 Raw extracted: {extracted}")
@@ -162,7 +164,8 @@ class ChatbotService:
             if extracted.get("keywords"):
                 relevant_items = rag.search_by_keywords(
                     keywords=extracted["keywords"],
-                    exclude_allergens=all_allergies
+                    exclude_allergens=all_allergies,
+                    exclude_dietary=dietary_prefs
                 )
 
                 if relevant_items[:3]:
@@ -184,10 +187,10 @@ class ChatbotService:
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=full_context,
-                generation_config={
-                    'temperature': 0,
-                    'max_output_tokens': 150
-                }
+                #config={
+                #    'temperature': 0,
+                #    'max_output_tokens': 150
+                #}
             )
             ai_message = response.text.strip()            
             

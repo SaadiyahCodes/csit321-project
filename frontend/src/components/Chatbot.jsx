@@ -1,12 +1,17 @@
 // src/components/Chatbot.jsx
+import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useState, useEffect, useRef } from "react";
 import { Send, Mic, X, Loader2, MicOff } from "lucide-react";
 import { useSession } from "../context/SessionContext";
 import { useLanguage } from "../context/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
 import api from "../api";
+import { useNavigate } from "react-router-dom";
 
 export default function Chatbot({ isOpen, onClose }) {
+  const {customer, profile} = useCustomerAuth();
+
+  const navigate = useNavigate();
   const { sessionId, restaurantId } = useSession();
   const { language } = useLanguage();
 
@@ -356,6 +361,41 @@ export default function Chatbot({ isOpen, onClose }) {
           flexDirection: 'column',
           gap: '12px'
         }}>
+          {/*Allergen/Dietary Banner — only shown if customer has restrictions*/}
+          {customer && (profile?.allergens?.length > 0 || profile?.dietary_preferences?.length > 0) && (
+            <div style={{
+              backgroundColor: '#fff7ed',
+              border: '1px solid #fed7aa',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              fontSize: '12px',
+              color: '#9a3412',
+              flexShrink: 0
+            }}>
+              <p style={{ margin: '0 0 4px 0', fontWeight: '600' }}>
+                🛡️ Personalizing recommendations based on your profile:
+              </p>
+              {profile?.allergens?.length > 0 && (
+                <p style={{ margin: '2px 0', color: '#dc2626' }}>
+                  Avoiding allergens: {profile.allergens.join(', ')}
+                </p>
+              )}
+              {profile?.dietary_preferences?.length > 0 && (
+                <p style={{ margin: '2px 0', color: '#dc2626' }}>
+                  Dietary preferences: {profile.dietary_preferences.join(', ')}
+                </p>
+              )}
+              <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#9a3412' }}>
+                To change these, visit your{' '}
+                <span
+                  onClick={() => navigate('/customer/profile')}
+                  style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  profile
+                </span>.
+              </p>
+            </div>
+          )}
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', marginTop: '40px' }}>
               <div style={{

@@ -17,7 +17,8 @@ class ChatHandler:
         session_id: str,
         language: str,
         db: Session,
-        user_allergies: Optional[List[str]] = None
+        user_allergies: Optional[List[str]] = None,
+        dietary_prefs: Optional[List[str]] = None
     ) -> Dict:
         """
         Complete chat processing with translation and auto-cart
@@ -69,7 +70,8 @@ class ChatHandler:
             session_id=session_id,
             db=db,
             restaurant_id=session.restaurant_id,
-            user_allergies=user_allergies
+            user_allergies=user_allergies,
+            dietary_prefs=dietary_prefs
         )
         
         if result.get("error"):

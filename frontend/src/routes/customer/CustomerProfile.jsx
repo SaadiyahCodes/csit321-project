@@ -79,6 +79,7 @@ const CustomerProfile = () => {
       });
       setAllergens([...tempAllergens]);
       setIsEditingAllergens(false);
+      await fetchCustomer();
     } catch (error) {
       console.error('Error saving allergens:', error);
       alert('Failed to save allergens. Please try again.');
@@ -101,6 +102,7 @@ const CustomerProfile = () => {
       });
       setDietaryPrefs([...tempDietaryPrefs]);
       setIsEditingDietary(false);
+      await fetchCustomer();
     } catch (error) {
       console.error('Error saving dietary preferences:', error);
       alert('Failed to save dietary preferences. Please try again.');

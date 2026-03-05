@@ -124,9 +124,9 @@ function NavLink({ label, scrolled, onClick }) {
 
 // ── Floating Food Cards ───────────────────────────────────────────────────────
 const FOOD_CARDS = [
-  { img: heroImg1, left: "2%",  top: "13%", rotate: -11, floatDir:  1 },
-  { img: heroImg2, left: "10%", top: "50%", rotate:   6, floatDir: -1 },
-  { img: heroImg3, left: "70%", top: "14%", rotate:  -5, floatDir:  1 },
+  { img: heroImg1, left: "2%",  top: "20%", rotate: -11, floatDir:  1 },
+  { img: heroImg2, left: "10%", top: "52%", rotate:   6, floatDir: -1 },
+  { img: heroImg3, left: "70%", top: "20%", rotate:  -5, floatDir:  1 },
   { img: heroImg4, left: "80%", top: "52%", rotate:   9, floatDir: -1 },
 ];
 

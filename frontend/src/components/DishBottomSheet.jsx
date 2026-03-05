@@ -157,7 +157,7 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                 {item.category && (
                   <div style={{ display: "flex", gap: 0, marginBottom: item.ingredients ? 6 : 0 }}>
                     <span style={{ fontWeight: 700, color: "#374151", fontSize: 14, width: 100, flexShrink: 0 }}>
-                      {tSync("Category")}:
+                      <TranslatedText>Category</TranslatedText>:
                     </span>
                     <span style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.5 }}>
                       {capitalize(item.category)}
@@ -167,7 +167,7 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                 {item.ingredients && (
                   <div style={{ display: "flex", gap: 0 }}>
                     <span style={{ fontWeight: 700, color: "#374151", fontSize: 14, width: 100, flexShrink: 0 }}>
-                      {tSync("Ingredients")}:
+                      <TranslatedText>Ingredients</TranslatedText>:
                     </span>
                     <span style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.5 }}>
                       {item.ingredients}

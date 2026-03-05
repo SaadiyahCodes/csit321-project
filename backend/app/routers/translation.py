@@ -35,7 +35,7 @@ def translate_text(req: TranslateRequest):
         req.text,
         req.target_lang,
         req.source_lang,
-        use_gemini=True
+        use_gemini=False
     )
 
 @router.post("/menu")

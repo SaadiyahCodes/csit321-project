@@ -168,7 +168,7 @@ Return ONLY the translation, nothing else."""
         self, 
         items: List[Dict], 
         target_lang: str,
-        use_gemini: bool = True  # NEW: Use Gemini for menus by default
+        use_gemini: bool = True
     ) -> List[Dict]:
         """Translate multiple items (menu items)"""
         print(f"🔍 translate_batch called with {len(items)} items, target_lang={target_lang}")
@@ -182,7 +182,6 @@ Return ONLY the translation, nothing else."""
         for i, item in enumerate(items):
             print(f"🔍 Translating item {i+1}/{len(items)}: {item.get('name', 'NO NAME')}")
             
-            # Use Gemini for menu items (better food context)
             name_result = self.translate_text(
                 item.get("name", ""), 
                 target_lang,
@@ -194,13 +193,39 @@ Return ONLY the translation, nothing else."""
                 target_lang,
                 use_gemini=use_gemini
             )
-            
+
+            # Category is a simple UI word — no food context needed
+            category = item.get("category", "")
+            category_result = self.translate_text(
+                category, target_lang, use_gemini=False
+            ) if category else {"translated_text": category}
+
+            # Ingredients may have food-specific terms — use Gemini
+            ingredients = item.get("ingredients", "")
+            ingredients_result = self.translate_text(
+                ingredients, target_lang, use_gemini=use_gemini
+            ) if ingredients else {"translated_text": ingredients}
+
+            # Allergens are short common words — no food context needed
+            allergens = item.get("allergens", [])
+            translated_allergens = []
+            for allergen in allergens:
+                allergen = allergen.strip()
+                if not allergen or allergen.lower() == "none":
+                    translated_allergens.append(allergen)
+                    continue
+                result = self.translate_text(allergen, target_lang, use_gemini=False)
+                translated_allergens.append(result.get("translated_text", allergen))
+
             translated_item = {
                 **item,
                 "name": name_result.get("translated_text", item.get("name")),
                 "description": desc_result.get("translated_text", item.get("description")),
+                "category": category_result.get("translated_text", category),
+                "ingredients": ingredients_result.get("translated_text", ingredients),
+                "allergens": translated_allergens,
                 "original_name": item.get("name"),
-                "original_description": item.get("description")
+                "original_description": item.get("description"),
             }
             
             translated.append(translated_item)

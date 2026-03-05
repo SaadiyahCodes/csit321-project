@@ -1,5 +1,5 @@
 // src/context/SessionContext.jsx
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api";
 import { useCustomerAuth } from "./CustomerAuthContext";
@@ -11,11 +11,28 @@ export function SessionProvider({ children }) {
   const {customer} = useCustomerAuth();
   const [sessionId, setSessionId] = useState(null);
   const [selectionId, setSelectionId] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     initializeSession();
   }, [restaurantId, customer?.id]);
+
+  //Call this any time cart changes (add, remove, update)
+  const fetchCartCount = useCallback(async (sid = selectionId, ssid = sessionId) => {
+    if (!sid || !ssid) return;
+    try {
+      const res = await api.get(`/api/selections/${sid}?session_id=${ssid}`);
+      setCartCount(res.data.item_count ?? 0);
+    } catch {
+      setCartCount(0);
+    }
+  }, [selectionId, sessionId]);
+
+  //Re-fetch count whenever selectionId/sessionId are ready
+  useEffect(() => {
+    if (selectionId && sessionId) fetchCartCount(selectionId, sessionId);
+  }, [selectionId, sessionId]);
 
   const initializeSession = async () => {
     if (!restaurantId) {
@@ -51,14 +68,19 @@ export function SessionProvider({ children }) {
         language: "en"
       });
 
-      setSessionId(sessionResponse.data.session_id);
+      const newSessionId = sessionResponse.data.session_id;
+      setSessionId(newSessionId);
 
       // Get or create selection (cart)
       const selectionResponse = await api.post(
-        `/api/selections/?session_id=${sessionResponse.data.session_id}`
+        `/api/selections/?session_id=${newSessionId}`
       );
+      const newSelectionId = selectionResponse.data.id;
+      setSelectionId(newSelectionId);
+      // Fetch initial cart count with the fresh IDs directly
+      // (state updates are async so pass them explicitly)
+      await fetchCartCount(newSelectionId, newSessionId);
 
-      setSelectionId(selectionResponse.data.id);
       setLoading(false);
     } catch (error) {
       console.error("Failed to initialize session:", error);
@@ -85,6 +107,8 @@ export function SessionProvider({ children }) {
         sessionId,
         selectionId,
         restaurantId,
+        cartCount,
+        fetchCartCount,
         loading,
         refreshSelection
       }}

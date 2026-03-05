@@ -1,119 +1,197 @@
 // src/routes/customer/CartPage.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus } from "lucide-react";
-import BottomNav from "../../components/BottomNav";
+import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, MapPin } from "lucide-react";
 import TranslatedText from "../../components/TranslatedText";
+import LanguageSelector from "../../components/LanguageSelector";
+import Chatbot from "../../components/Chatbot";
+import BottomNav from "../../components/BottomNav";
 import { useSession } from "../../context/SessionContext";
 import { useLanguage } from "../../context/LanguageContext";
-import Chatbot from "../../components/Chatbot";
 import api from "../../api";
+import logo4 from "../../assets/gusto-logo4.png";
 
 export default function CartPage() {
   const navigate = useNavigate();
   const { sessionId, selectionId, restaurantId, loading: sessionLoading } = useSession();
   const { language, tSync } = useLanguage();
-  const [activeNav, setActiveNav] = useState("cart");
-  
+
   const [selection, setSelection] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState({});
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [navScrolled, setNavScrolled] = useState(false);
+  const [activeNav, setActiveNav] = useState("cart");
+  const [tableNumber, setTableNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+
+  // Optimistic local quantities — { [itemId]: qty }
+  const [localQtys, setLocalQtys] = useState({});
+  const debounceTimers = useRef({});
 
   useEffect(() => {
-    if (selectionId && sessionId) {
-      fetchCart();
-    }
+    if (selectionId && sessionId) fetchCart();
   }, [selectionId, sessionId, language]);
+
+  useEffect(() => {
+    const onScroll = () => setNavScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Cancel all pending timers on unmount
+  useEffect(() => {
+    return () => Object.values(debounceTimers.current).forEach(clearTimeout);
+  }, []);
 
   const fetchCart = async () => {
     setLoading(true);
     try {
-      const response = await api.get(
-        `/api/selections/${selectionId}?session_id=${sessionId}`
-      );
+      const response = await api.get(`/api/selections/${selectionId}?session_id=${sessionId}`);
       const cartData = response.data;
 
-      // If not English, translate menu item names and descriptions
-      if (language !== 'en' && cartData.items) {
+      if (language !== "en" && cartData.items) {
         for (let item of cartData.items) {
           if (item.menu_item.name) {
-            const nameResult = await api.post('/api/translate/text', {
-              text: item.menu_item.name,
-              target_lang: language,
-              source_lang: 'en'
+            const result = await api.post("/api/translate/text", {
+              text: item.menu_item.name, target_lang: language, source_lang: "en",
             });
-            if (nameResult.data.success) {
-              item.menu_item.name = nameResult.data.translated_text;
-            }
+            if (result.data.success) item.menu_item.name = result.data.translated_text;
           }
         }
       }
 
       setSelection(cartData);
-      setLoading(false);
+      // Seed local qtys from server
+      const qtys = {};
+      for (const it of cartData.items || []) qtys[it.id] = it.quantity;
+      setLocalQtys(qtys);
     } catch (err) {
       console.error("Error fetching cart:", err);
+    } finally {
       setLoading(false);
     }
   };
 
-  const updateQuantity = async (itemId, newQuantity) => {
-    setUpdating(prev => ({ ...prev, [itemId]: true }));
-    
-    try {
-      if (newQuantity === 0) {
-        await api.delete(
-          `/api/selections/items/${itemId}?session_id=${sessionId}`
-        );
-      } else {
-        await api.put(
-          `/api/selections/items/${itemId}?session_id=${sessionId}`,
-          { quantity: newQuantity }
-        );
+  // Instant local update + debounced API sync (same pattern as MenuPage)
+  const updateQuantity = (itemId, newQty) => {
+    if (newQty < 0) return;
+
+    // Instant UI
+    setLocalQtys(prev => ({ ...prev, [itemId]: newQty }));
+
+    // Debounce API
+    clearTimeout(debounceTimers.current[itemId]);
+    debounceTimers.current[itemId] = setTimeout(async () => {
+      try {
+        if (newQty === 0) {
+          await api.delete(`/api/selections/items/${itemId}?session_id=${sessionId}`);
+          // Refetch only when item is fully removed so list updates
+          await fetchCart();
+        } else {
+          await api.put(`/api/selections/items/${itemId}?session_id=${sessionId}`, { quantity: newQty });
+          // Update totals silently without full reload
+          setSelection(prev => {
+            if (!prev) return prev;
+            const items = prev.items.map(it => {
+              if (it.id !== itemId) return it;
+              return { ...it, quantity: newQty, item_total: it.menu_item.price * newQty };
+            });
+            const total_price = items.reduce((s, it) => s + it.item_total, 0);
+            const item_count = items.reduce((s, it) => s + it.quantity, 0);
+            return { ...prev, items, total_price, item_count };
+          });
+        }
+      } catch (err) {
+        console.error("Sync failed:", err);
       }
-      
-      await fetchCart();
-    } catch (err) {
-      console.error("Error updating item:", err);
-      alert(tSync("Failed to update item"));
-    } finally {
-      setUpdating(prev => ({ ...prev, [itemId]: false }));
-    }
+      delete debounceTimers.current[itemId];
+    }, 600);
   };
 
   const removeItem = async (itemId) => {
     if (!confirm(tSync("Remove this item from cart?"))) return;
-    
-    setUpdating(prev => ({ ...prev, [itemId]: true }));
-    
+    // Instant remove from UI
+    setSelection(prev => {
+      if (!prev) return prev;
+      const items = prev.items.filter(it => it.id !== itemId);
+      const total_price = items.reduce((s, it) => s + it.item_total, 0);
+      const item_count = items.reduce((s, it) => s + it.quantity, 0);
+      return { ...prev, items, total_price, item_count };
+    });
     try {
-      await api.delete(
-        `/api/selections/items/${itemId}?session_id=${sessionId}`
-      );
-      await fetchCart();
+      await api.delete(`/api/selections/items/${itemId}?session_id=${sessionId}`);
     } catch (err) {
       console.error("Error removing item:", err);
-      alert(tSync("Failed to remove item"));
-    } finally {
-      setUpdating(prev => ({ ...prev, [itemId]: false }));
+      await fetchCart(); // restore on error
     }
   };
 
-  const handleCheckout = () => {
-    navigate(`/restaurant/${restaurantId}/order-summary`);
-  };
+  const handleCheckout = () => navigate(`/restaurant/${restaurantId}/order-summary`);
+
+  // ── Navbar ──
+  const Navbar = () => (
+    <nav dir="ltr" style={{
+      position: "sticky", top: 0, zIndex: 400,
+      background: navScrolled ? "rgba(255,255,255,0.93)" : "white",
+      backdropFilter: navScrolled ? "blur(16px)" : "none",
+      borderBottom: "1px solid #f3f4f6",
+      boxShadow: navScrolled ? "0 2px 16px rgba(0,0,0,0.07)" : "none",
+      transition: "box-shadow 0.3s ease",
+      padding: "0 20px",
+    }}>
+      <div style={{
+        maxWidth: 800, margin: "0 auto",
+        display: "flex", alignItems: "center",
+        justifyContent: "space-between",
+        height: 62, gap: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={() => navigate(`/restaurant/${restaurantId}/menu`)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              width: 36, height: 36, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#f97316",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "#fff7ed"}
+            onMouseLeave={e => e.currentTarget.style.background = "none"}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <img src={logo4} alt="Gusto" onClick={() => navigate("/")}
+            style={{ height: 32, objectFit: "contain", cursor: "pointer" }} />
+        </div>
+
+        <h1 style={{
+          flex: 1, textAlign: "center",
+          fontSize: "clamp(15px,2.5vw,19px)",
+          fontWeight: 800, color: "#111", margin: 0,
+        }}>
+          <TranslatedText>Your Cart</TranslatedText>
+        </h1>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <LanguageSelector variant="navbar" />
+        </div>
+      </div>
+    </nav>
+  );
 
   if (loading || sessionLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="font-semibold">
-          <TranslatedText>Loading cart...</TranslatedText>
-        </p>
+      <div style={{ minHeight: "100vh", background: "#fafaf8" }}>
+        <Navbar />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh" }}>
+          <p style={{ fontWeight: 600, fontSize: 16, color: "#888" }}>
+            <TranslatedText>Loading cart...</TranslatedText>
+          </p>
+        </div>
       </div>
     );
   }
 
+  // ── Empty cart — original design ──
   if (!selection || selection.items.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
@@ -126,154 +204,256 @@ export default function CartPage() {
           </p>
           <button
             onClick={() => navigate(`/restaurant/${restaurantId}/menu`)}
-            className="bg-orange-600 text-white px-6 py-3 rounded-full font-bold"
+            className="bg-orange-600 text-white px-6 py-3 rounded-full font-bold text-base"
           >
             <TranslatedText>Browse Menu</TranslatedText>
           </button>
-        </div>
-        <div className="fixed bottom-0 left-0 right-0">
-          <BottomNav active={activeNav} onChange={setActiveNav} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
-      {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0">
-        <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/restaurant/${restaurantId}/menu`)}
-              className="text-2xl font-bold text-orange-600"
-            >
-              ←
-            </button>
-            <h1 className="text-xl font-extrabold">
-              <TranslatedText>Your Cart</TranslatedText>
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 110 }}>
+      <Navbar />
 
-      {/* Cart Items */}
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          {selection.items.map((item) => (
-            <div
-              key={item.id}
-              className="p-4 border-b last:border-b-0 flex gap-4"
-            >
-              {/* Item Image */}
-              {item.menu_item.image_url && (
-                <img
-                  src={item.menu_item.image_url}
-                  alt={item.menu_item.name}
-                  className="w-20 h-20 rounded-xl object-cover"
-                />
-              )}
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px 20px 0" }}>
 
-              {/* Item Details */}
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900">{item.menu_item.name}</h3>
-                <p className="text-sm text-gray-600">${item.menu_item.price.toFixed(2)} each</p>
-                
-                {item.notes && (
-                  <p className="text-xs text-gray-500 mt-1 italic">
-                    {tSync("Note")}: {item.notes}
-                  </p>
+        {/* ── Cart Items ── */}
+        <div style={{
+          background: "white", borderRadius: 24,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          overflow: "hidden", marginBottom: 16,
+        }}>
+          {selection.items.map((item, idx) => {
+            const isLast = idx === selection.items.length - 1;
+            const qty = localQtys[item.id] ?? item.quantity;
+            const itemTotal = (item.menu_item.price * qty).toFixed(2);
+
+            return (
+              <div key={item.id} style={{
+                display: "flex", gap: 16, padding: "18px 20px",
+                borderBottom: isLast ? "none" : "1px solid #f3f4f6",
+              }}>
+                {/* Image */}
+                {item.menu_item.image_url && (
+                  <div style={{
+                    width: 100, height: 100, borderRadius: 16,
+                    overflow: "hidden", flexShrink: 0,
+                  }}>
+                    <img
+                      src={item.menu_item.image_url}
+                      alt={item.menu_item.name}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  </div>
                 )}
 
-                {/* Quantity Controls */}
-                <div className="flex items-center gap-3 mt-2">
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    disabled={updating[item.id]}
-                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center disabled:opacity-50"
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span className="font-bold text-gray-900 w-8 text-center">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    disabled={updating[item.id]}
-                    className="w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center disabled:opacity-50"
-                  >
-                    <Plus size={16} />
-                  </button>
+                {/* Details */}
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111", margin: 0, lineHeight: 1.3 }}>
+                      {item.menu_item.name}
+                    </h3>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: "#ef4444", padding: 4, flexShrink: 0,
+                      }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+
+                  {/* Notes pill */}
+                  {item.notes && (
+                    <span style={{
+                      display: "inline-block", width: "fit-content",
+                      background: "#fafaf8", border: "1px solid #e5e7eb",
+                      borderRadius: 999, padding: "2px 10px",
+                      fontSize: 12, color: "#6b7280",
+                    }}>
+                      📝 {item.notes}
+                    </span>
+                  )}
+
+                  {/* Qty + subtotal */}
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    justifyContent: "space-between", marginTop: "auto", paddingTop: 4,
+                  }}>
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      background: "#fff7ed", borderRadius: 999, padding: "5px 10px",
+                    }}>
+                      <button
+                        onClick={() => updateQuantity(item.id, qty - 1)}
+                        style={{
+                          width: 30, height: 30, borderRadius: "50%",
+                          background: qty === 1 ? "#e5e7eb" : "#f97316",
+                          border: "none", cursor: qty === 1 ? "default" : "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: qty === 1 ? "#9ca3af" : "white",
+                        }}
+                      ><Minus size={13} /></button>
+                      <span style={{ fontWeight: 800, fontSize: 16, color: "#111", minWidth: 18, textAlign: "center" }}>
+                        {qty}
+                      </span>
+                      <button
+                        onClick={() => updateQuantity(item.id, qty + 1)}
+                        style={{
+                          width: 30, height: 30, borderRadius: "50%",
+                          background: "#f97316", border: "none", cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: "white",
+                        }}
+                      ><Plus size={13} /></button>
+                    </div>
+
+                    <span style={{ fontSize: 17, fontWeight: 800, color: "#111" }}>
+                      {itemTotal} AED
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              {/* Item Total & Remove */}
-              <div className="flex flex-col items-end justify-between">
-                <button
-                  onClick={() => removeItem(item.id)}
-                  disabled={updating[item.id]}
-                  className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                >
-                  <Trash2 size={20} />
-                </button>
-                <span className="font-bold text-gray-900">
-                  ${item.item_total.toFixed(2)}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Summary */}
-        <div className="bg-white rounded-3xl shadow-sm p-6 mt-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">
-              <TranslatedText>Subtotal</TranslatedText>
-            </span>
-            <span className="font-semibold">${selection.total_price.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-600">
-              <TranslatedText>Items</TranslatedText>
-            </span>
-            <span className="font-semibold">{selection.item_count}</span>
-          </div>
-          <div className="border-t pt-4 mt-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-extrabold">
+        {/* ── Order Summary ── */}
+        <div style={{
+          background: "white", borderRadius: 24,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          padding: "22px 24px",
+        }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111", margin: "0 0 16px" }}>
+            <TranslatedText>Order Summary</TranslatedText>
+          </h2>
+
+          {selection.items.map(item => {
+            const qty = localQtys[item.id] ?? item.quantity;
+            const itemTotal = (item.menu_item.price * qty).toFixed(2);
+            return (
+              <div key={item.id} style={{
+                display: "flex", justifyContent: "space-between",
+                fontSize: 15, color: "#555", marginBottom: 10,
+              }}>
+                <span style={{ flex: 1, marginRight: 12 }}>
+                  {item.menu_item.name}
+                  <span style={{ color: "#9ca3af", marginLeft: 6 }}>×{qty}</span>
+                </span>
+                <span style={{ fontWeight: 600, color: "#111" }}>{itemTotal} AED</span>
+              </div>
+            );
+          })}
+
+          <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 12, paddingTop: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: "#111" }}>
                 <TranslatedText>Total</TranslatedText>
               </span>
-              <span className="text-2xl font-extrabold text-orange-600">
-                ${selection.total_price.toFixed(2)}
+              <span style={{
+                fontSize: 24, fontWeight: 900,
+                background: "linear-gradient(135deg,#f97316,#ea580c)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>
+                {selection.total_price.toFixed(2)} AED
               </span>
             </div>
+            <p style={{ fontSize: 13, color: "#9ca3af", margin: "4px 0 0" }}>
+              {selection.item_count} <TranslatedText>items</TranslatedText>
+            </p>
+          </div>
+        </div>
+
+        {/* ── Dining Details ── */}
+        <div style={{
+          background: "white", borderRadius: 24,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          padding: "20px", marginBottom: 16,
+          display: "flex", flexDirection: "column", gap: 14,
+        }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111", margin: 0 }}>
+            <TranslatedText>Dining Details</TranslatedText>
+          </h2>
+
+          <div>
+            <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+              <TranslatedText>Table Number</TranslatedText>
+              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 4 }}>
+                (<TranslatedText>optional</TranslatedText>)
+              </span>
+            </label>
+            <input
+              type="text"
+              value={tableNumber}
+              onChange={e => setTableNumber(e.target.value)}
+              placeholder={tSync("e.g. Table 7")}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "11px 14px", borderRadius: 12, fontSize: 15,
+                border: "1.5px solid #e5e7eb", outline: "none",
+                fontFamily: "inherit", color: "#111",
+              }}
+              onFocus={e => e.target.style.borderColor = "#f97316"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+              <MapPin size={14} color="#f97316" />
+              <TranslatedText>Delivery Address</TranslatedText>
+              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 2 }}>
+                (<TranslatedText>optional</TranslatedText>)
+              </span>
+            </label>
+            <textarea
+              value={deliveryAddress}
+              onChange={e => setDeliveryAddress(e.target.value)}
+              placeholder={tSync("Enter delivery address if applicable...")}
+              rows={2}
+              style={{
+                width: "100%", boxSizing: "border-box",
+                padding: "11px 14px", borderRadius: 12, fontSize: 15,
+                border: "1.5px solid #e5e7eb", outline: "none",
+                resize: "none", fontFamily: "inherit", color: "#111",
+              }}
+              onFocus={e => e.target.style.borderColor = "#f97316"}
+              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            />
           </div>
         </div>
       </div>
 
-      {/* Checkout Button */}
-      <div className="fixed bottom-14 left-0 right-0 bg-white border-t shadow-lg p-4">
-        <div className="max-w-2xl mx-auto">
+      {/* ── Fixed Checkout Button ── */}
+      <div dir="ltr" style={{
+        position: "fixed", bottom: 0, left: 0, right: 0,
+        background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)",
+        borderTop: "1px solid #f3f4f6", padding: "14px 20px 22px",
+        boxShadow: "0 -4px 20px rgba(0,0,0,0.06)",
+      }}>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <button
             onClick={handleCheckout}
-            className="w-full bg-orange-600 text-white py-4 rounded-full font-extrabold text-lg"
+            style={{
+              width: "100%", padding: "16px 0", borderRadius: 999,
+              background: "linear-gradient(135deg,#f97316,#ea580c)",
+              border: "none", cursor: "pointer",
+              color: "white", fontSize: 17, fontWeight: 800,
+              boxShadow: "0 4px 16px rgba(249,115,22,0.35)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+            }}
           >
+            <ShoppingCart size={20} />
             <TranslatedText>Proceed to Checkout</TranslatedText>
+            <span style={{ opacity: 0.85, fontSize: 15 }}>· {selection.total_price.toFixed(2)} AED</span>
           </button>
         </div>
       </div>
 
-      {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-0 right-0">
-        <BottomNav active={activeNav} onChange={setActiveNav}
-         onChatToggle={() => setIsChatOpen(!isChatOpen)} 
-        />
-
-        <Chatbot 
-          isOpen={isChatOpen} 
-          onClose={() => setIsChatOpen(false)} 
-        />
-      </div>
+      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }

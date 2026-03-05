@@ -150,7 +150,8 @@ def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get
         qr_code=qr_code,
         total_price=response.total_price,
         item_count=response.item_count,
-        finalized_at=selection.finalized_at
+        finalized_at=selection.finalized_at,
+        items=response.items,
     )
 
 

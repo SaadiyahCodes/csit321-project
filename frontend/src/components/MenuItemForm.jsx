@@ -3,7 +3,10 @@ import { useState } from 'react';
 
 const CATEGORIES = ["mains", "sides", "dessert", "drinks"];
 export default function MenuItemForm({ item, onSave, onCancel }) {
-  const [formData, setFormData] = useState(item || {
+  const [formData, setFormData] = useState(item ? {
+    ...item,
+    allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : ""
+  } : {
     name: '',
     description: '',
     price: '',
@@ -15,7 +18,11 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
   });
 
   const handleSubmit = () => {
-    onSave(formData);
+    const allergens = typeof formData.allergens === "string"
+      ? formData.allergens.split(",").map(a => a.trim()).filter(Boolean)
+      : formData.allergens || [];
+
+    onSave({ ...formData, allergens });
   };
 
   const inputStyle = {

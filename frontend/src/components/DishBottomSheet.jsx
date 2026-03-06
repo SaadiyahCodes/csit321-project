@@ -1,11 +1,13 @@
 // src/components/DishBottomSheet.jsx
 import { useState, useEffect } from "react";
 import { X, Plus, Minus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import TranslatedText from "./TranslatedText";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty = 0 }) {
   const { tSync } = useLanguage();
+  const navigate = useNavigate();
   const [qty, setQty] = useState(initialQty > 0 ? initialQty : 1);
   const [notes, setNotes] = useState("");
   const [adding, setAdding] = useState(false);
@@ -36,9 +38,10 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
   const isLikelyARCapable = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const onAR = () => {
+    console.log("onAR fired, ar_model_url:", item.ar_model_url);
     if (!item.ar_model_url) { alert("AR model not available for this item."); return; }
     if (!isLikelyARCapable()) { alert("AR Preview is only available on mobile and tablet devices."); return; }
-    window.location.href = `/ar?model=${encodeURIComponent(item.ar_model_url)}`;
+    navigate(`/ar?model=${encodeURIComponent(item.ar_model_url)}`);
   };
 
   if (!item) return null;

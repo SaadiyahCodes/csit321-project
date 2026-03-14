@@ -1,7 +1,7 @@
 //src/routes/customer/LandingPage.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UtensilsCrossed, ChevronDown, Shield, Zap, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, UtensilsCrossed, ChevronDown, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import RestaurantCard from "../../components/RestaurantCard";
 import LanguageSelector from "../../components/LanguageSelector";
 import TranslatedText from "../../components/TranslatedText";
@@ -18,6 +18,9 @@ import heroImg1 from "../../assets/heroimg1.jpg";
 import heroImg2 from "../../assets/heroimg2.jpg";
 import heroImg3 from "../../assets/heroimg3.jpg";
 import heroImg4 from "../../assets/heroimg4.jpg";
+import arImg2 from "../../assets/ARimg2.png";
+import aboutBurger from "../../assets/about-burger.jpg";
+import aboutChatbot from "../../assets/about-chatbot.png";
 
 // ── Top Navbar ────────────────────────────────────────────────────────────────
 function TopNav({ customer }) {
@@ -329,87 +332,63 @@ function Hero({ onScrollDown }) {
 // ── Stacking Features / About Section ────────────────────────────────────────
 const FEATURES = [
   {
-    Icon: Shield,
     title: "Allergen Safety Filtering",
     subtitle: "Dine without worry",
     accent: "#4CAF50",
-    description: "Smart filtering flags and hides dishes based on your dietary restrictions and allergens. Set your profile once and dine safe every time.",
+    description: <>Smart filtering flags and hides dishes based on your dietary restrictions and allergens.<br/>Set your profile once and dine safe every time.</>,
     illustration: (
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
-        {[
-          { label: "Gluten-Free", safe: true },
-          { label: "Nut-Free",    safe: true },
-          { label: "Dairy-Free",  safe: false },
-          { label: "Vegan",       safe: true },
-          { label: "Shellfish-Free", safe: false },
-        ].map(tag => (
-          <span key={tag.label} style={{
-            padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-            background: tag.safe ? "rgba(76,175,80,0.1)" : "rgba(242,140,40,0.1)",
-            color: tag.safe ? "#4CAF50" : "#F28C28",
-            border: `1px solid ${tag.safe ? "rgba(76,175,80,0.3)" : "rgba(242,140,40,0.3)"}`,
-          }}>
-            {tag.safe ? "✓" : "✗"} {tag.label}
-          </span>
-        ))}
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <img
+          src={aboutBurger}
+          alt="Burger"
+          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 12, display: "block" }}
+        />
+        {/* Tags overlaid at bottom of image */}
+        <div style={{
+          position: "absolute", bottom: 10, left: 0, right: 0,
+          display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", padding: "0 8px",
+        }}>
+          {[
+            { label: "Dairy-Free", safe: false },
+            { label: "Halal",      safe: true  },
+          ].map(tag => (
+            <span key={tag.label} style={{
+              padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600,
+              background: tag.safe ? "rgba(76,175,80,0.85)" : "rgba(220,38,38,0.85)",
+              color: "white",
+              backdropFilter: "blur(4px)",
+            }}>
+              {tag.safe ? "✓" : "✗"} {tag.label}
+            </span>
+          ))}
+        </div>
       </div>
     ),
   },
   {
-    Icon: Zap,
     title: "Smart AI Chatbot",
     subtitle: "Your personal food guide",
     accent: "#F28C28",
-    description: "An AI assistant that knows every menu. Ask for recommendations, ingredient details, or place your order completely hands-free — in any language.",
+    description: <>An AI assistant that knows every menu.<br/>Ask for recommendations, ingredient details,<br/>or place your order completely hands-free<br/>— in any language.</>,
     illustration: (
-      <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8, maxWidth: 300 }}>
-        <div style={{ alignSelf: "flex-start", padding: "9px 14px", borderRadius: "16px 16px 16px 4px", background: "#F5E6D3", color: "#5C3D1A", fontSize: 13 }}>
-          What's good with the salmon? 🐟
-        </div>
-        <div style={{ alignSelf: "flex-end", padding: "9px 14px", borderRadius: "16px 16px 4px 16px", background: "#F28C28", color: "white", fontSize: 13 }}>
-          Try our citrus risotto or a Chardonnay!
-        </div>
-        <div style={{ alignSelf: "flex-start", padding: "9px 14px", borderRadius: "16px 16px 16px 4px", background: "#F5E6D3", color: "#5C3D1A", fontSize: 13 }}>
-          Is it nut-free? 🥜
-        </div>
-      </div>
+      <img
+        src={aboutChatbot}
+        alt="Chatbot screenshot"
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: 12, display: "block" }}
+      />
     ),
   },
   {
-    Icon: Eye,
     title: "AR Food Preview",
     subtitle: "See before you eat",
     accent: "#5C8DCA",
-    description: "Point your camera at the table and see a life-sized photorealistic preview of your dish before ordering. Know exactly what you're getting.",
+    description: <>Point your camera at the table and see a life-sized photorealistic preview of your dish before ordering.<br/>Know exactly what you're getting.</>,
     illustration: (
-      <div style={{ marginTop: 20 }}>
-        <div style={{
-          width: "100%", height: 100, borderRadius: 16,
-          border: "2px dashed rgba(92,141,202,0.35)",
-          background: "rgba(92,141,202,0.05)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", gap: 10,
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(92,141,202,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Eye size={20} color="#5C8DCA" />
-            </div>
-            <div style={{ textAlign: "left" }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>AR Preview</p>
-              <p style={{ margin: 0, fontSize: 12, color: "#888" }}>Tap to see dish in 3D</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 5 }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{
-                width: 6, height: 6, borderRadius: "50%", background: "rgba(92,141,202,0.45)",
-                animation: `arPulse 1.2s ${i * 0.2}s ease-in-out infinite`,
-              }} />
-            ))}
-          </div>
-        </div>
-        <style>{`@keyframes arPulse{0%,100%{opacity:0.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}`}</style>
-      </div>
+      <img
+        src={arImg2}
+        alt="AR food preview"
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: 12, display: "block" }}
+      />
     ),
   },
 ];
@@ -444,22 +423,24 @@ function AboutSection() {
   };
 
   return (
-    <section id="about" style={{ background: "#fff8f0", padding: "80px 24px 100px" }}>
-      <div style={{ maxWidth: 680, margin: "0 auto" }}>
-        <Reveal>
-          <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#f97316", marginBottom: 10 }}>
+    <section id="about" style={{ background: "#fff8f0", padding: "80px 20px 100px" }}>
+      <Reveal>
+        <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 52 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ea580c)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Sparkles size={18} color="white" />
+            </div>
+            <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#111", margin: 0 }}>
               About Gusto
-            </span>
-            <h2 style={{ fontSize: "clamp(24px,4vw,40px)", fontWeight: 800, color: "#111", margin: "0 0 12px", letterSpacing: "-0.02em" }}>
-              A smarter way to dine
             </h2>
-            <p style={{ fontSize: 15, color: "#777", maxWidth: 400, margin: "0 auto", lineHeight: 1.65 }}>
-              Three features that make every meal safer, easier, and more delicious.
-            </p>
           </div>
-        </Reveal>
-
+          <p style={{ fontSize: 16, color: "#93851e", margin: 10 }}>
+            Features that make every meal <strong>safer</strong>, <strong>easier</strong>, and more <strong>delicious</strong>.
+          </p>
+        </div>
+      </Reveal>
+      {/*Cards*/}
+      <div style={{ maxWidth: 680, margin: "0 auto" }}>
         <Reveal delay={100}>
           <div
             onMouseEnter={() => setIsAutoPlaying(false)}
@@ -480,24 +461,37 @@ function AboutSection() {
                   background: "white",
                   border: "1px solid rgba(0,0,0,0.07)",
                   boxShadow: "0 8px 32px rgba(249,115,22,0.07)",
-                  padding: "clamp(20px,4vw,32px)",
-                  boxSizing: "border-box", overflow: "hidden",
+                  padding: "clamp(20px,4vw,28px)",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                  display: "flex",
+                  flexDirection: "column",
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-                    <div style={{
-                      width: 50, height: 50, borderRadius: 14, flexShrink: 0,
-                      background: `${f.accent}18`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      <f.Icon size={24} color={f.accent} />
+                  {/* Header: centered title + subtitle, no icon */}
+                  <div style={{ textAlign: "center", marginBottom: 16 }}>
+                    {f.subtitle && (
+                      <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>
+                        {f.subtitle}
+                      </p>
+                    )}
+                    <h3 style={{ margin: 0, fontSize: "clamp(16px,2.5vw,21px)", fontWeight: 800, color: "#111" }}>
+                      {f.title}
+                    </h3>
+                  </div>
+
+                  {/* Body: image left, description right */}
+                  <div style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
+                    {/* Left: illustration strictly clipped */}
+                    <div style={{ flex: "0 0 52%", minWidth: 0, overflow: "hidden", borderRadius: 12 }}>
+                      {f.illustration}
                     </div>
-                    <div>
-                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>{f.subtitle}</p>
-                      <h3 style={{ margin: 0, fontSize: "clamp(16px,2.5vw,21px)", fontWeight: 800, color: "#111" }}>{f.title}</h3>
+                    {/* Right: description vertically centered */}
+                    <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                      <p style={{ fontSize: 14, color: "#000000", lineHeight: 2, margin: 0 }}>
+                        {f.description}
+                      </p>
                     </div>
                   </div>
-                  <p style={{ fontSize: 14, color: "#666", lineHeight: 1.65, margin: 0 }}>{f.description}</p>
-                  {f.illustration}
                 </div>
               </div>
             ))}
@@ -577,7 +571,7 @@ export default function LandingPage() {
                   <TranslatedText>Restaurants</TranslatedText>
                 </h2>
               </div>
-              <p style={{ color: "#888", fontSize: 14, margin: 0, marginLeft: 48 }}>
+              <p style={{ color: "#93851e", fontSize: 14, margin: 0 }}>
                 {loading
                   ? <TranslatedText>Loading…</TranslatedText>
                   : <><span>{filtered.length}</span> <TranslatedText>{filtered.length === 1 ? "restaurant available" : "restaurants available"}</TranslatedText></>

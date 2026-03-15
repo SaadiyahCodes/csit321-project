@@ -182,7 +182,7 @@ export default function MenuPage() {
 
           <h1 style={{
             flex: 1, textAlign: "center",
-            fontSize: "clamp(14px,2.5vw,19px)",
+            fontSize: "clamp(16px,2.5vw,22px)",
             fontWeight: 800, color: "#111", margin: 0,
             whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
           }}>
@@ -268,7 +268,7 @@ export default function MenuPage() {
               <div style={{ textAlign: "center" }}>
                 <h2 style={{
                   color: "white", margin: 0,
-                  fontSize: "clamp(18px,3vw,26px)",
+                  fontSize: "clamp(20px,3vw,30px)",
                   fontWeight: 900, letterSpacing: "-0.02em",
                   textShadow: "0 2px 12px rgba(0,0,0,0.4)",
                 }}>
@@ -280,7 +280,7 @@ export default function MenuPage() {
                     background: "rgba(255,255,255,0.18)",
                     backdropFilter: "blur(8px)",
                     border: "1px solid rgba(255,255,255,0.3)",
-                    color: "white", fontSize: 11, fontWeight: 600,
+                    color: "white", fontSize: 13, fontWeight: 600,
                     padding: "3px 12px", borderRadius: 999,
                   }}>
                     {restaurant.category}

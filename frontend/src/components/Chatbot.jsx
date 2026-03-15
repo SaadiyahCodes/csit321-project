@@ -224,13 +224,13 @@ export default function Chatbot({ isOpen, onClose }) {
   };
 
   const sendVoiceMessage = async (audioBlob) => {
-    setIsTyping(true);
     setIsSending(true);
 
     try {
       const reader = new FileReader();
 
       reader.onloadend = async () => {
+        setIsTyping(true); // ← moved inside onloadend, right before the API call
         const base64Audio = reader.result.split(",")[1];
 
         try {
@@ -260,7 +260,6 @@ export default function Chatbot({ isOpen, onClose }) {
 
             setMessages((prev) => [...prev, userMessage, botMessage]);
 
-            // Voice input always auto-plays audio regardless of toggle
             if (response.data.bot_audio) {
               try {
                 const audio = new Audio(`data:audio/mp3;base64,${response.data.bot_audio}`);
@@ -270,7 +269,6 @@ export default function Chatbot({ isOpen, onClose }) {
               }
             }
 
-            // Notify about items added to cart
             if (response.data.items_added_to_cart?.length > 0) {
               const itemNames = response.data.items_added_to_cart.join(", ");
               alert(`✅ Added to cart: ${itemNames}`);
@@ -280,20 +278,22 @@ export default function Chatbot({ isOpen, onClose }) {
           }
         } catch (apiError) {
           console.error("❌ API call failed:", apiError);
-          throw apiError;
+          alert("Voice message failed. Please try typing instead.");
+        } finally {
+          setIsTyping(false); // ← clears after API resolves
+          setIsSending(false);
         }
       };
 
       reader.onerror = () => {
         alert("Failed to process audio. Please try again.");
+        setIsSending(false);
       };
 
       reader.readAsDataURL(audioBlob);
     } catch (error) {
       console.error("❌ Voice message error:", error);
       alert("Voice message failed. Please try typing instead.");
-    } finally {
-      setIsTyping(false);
       setIsSending(false);
     }
   };
@@ -302,6 +302,24 @@ export default function Chatbot({ isOpen, onClose }) {
 
   return (
     <>
+      <style>{`
+        @keyframes micPulse {
+          0%, 100% { box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+          50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0.08); }
+        }
+        @keyframes bounce {
+          0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+          40%           { transform: scale(1.1); opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.5; }
+        }
+      `}</style>
       {/* Backdrop/Overlay */}
       <div
         onClick={onClose}
@@ -417,40 +435,36 @@ export default function Chatbot({ isOpen, onClose }) {
         >
           {/* Allergen/Dietary Banner */}
           {customer && (profile?.allergens?.length > 0 || profile?.dietary_preferences?.length > 0) && (
-            <div
-              style={{
-                backgroundColor: "#fff7ed",
-                border: "1px solid #fed7aa",
-                borderRadius: "12px",
-                padding: "10px 14px",
-                fontSize: "12px",
-                color: "#9a3412",
-                flexShrink: 0,
-              }}
-            >
-              <p style={{ margin: "0 0 4px 0", fontWeight: "600" }}>
-                🛡️ Personalizing recommendations based on your profile:
+            <div style={{
+              backgroundColor: "#fff7ed",
+              border: "1px solid #fed7aa",
+              borderRadius: "12px",
+              padding: "6px 12px",
+              fontSize: "13px",
+              color: "#381b11",
+              flexShrink: 0,
+              textAlign: "center",
+            }}>
+              <p style={{ margin: 0 }}>
+                Personalizing from your profile -{" "}
+                <span
+                  onClick={() => navigate("/customer/profile")}
+                  style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}
+                >
+                  Change here
+                </span>
               </p>
               {profile?.allergens?.length > 0 && (
-                <p style={{ margin: "2px 0", color: "#dc2626" }}>
-                  Avoiding allergens: {profile.allergens.join(", ")}
+                <p style={{ margin: "0 0 2px", color: "#5a480d" }}>
+                  Allergens: {profile.allergens.join(", ")}
                 </p>
               )}
               {profile?.dietary_preferences?.length > 0 && (
-                <p style={{ margin: "2px 0", color: "#dc2626" }}>
+                <p style={{ margin: "0 0 4px", color: "#5a480d" }}>
                   Dietary preferences: {profile.dietary_preferences.join(", ")}
                 </p>
               )}
-              <p style={{ margin: "4px 0 0 0", fontSize: "11px", color: "#9a3412" }}>
-                To change these, visit your{" "}
-                <span
-                  onClick={() => navigate("/customer/profile")}
-                  style={{ textDecoration: "underline", cursor: "pointer" }}
-                >
-                  profile
-                </span>
-                .
-              </p>
+              
             </div>
           )}
 
@@ -678,20 +692,25 @@ export default function Chatbot({ isOpen, onClose }) {
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isSending}
               style={{
-                background: isRecording ? "#ef4444" : "none",
-                border: "none",
+                background: isRecording ? "#ef4444" : "transparent",
+                border: isRecording ? "2px solid rgba(239,68,68,0.4)" : "2px solid transparent",
+                borderRadius: "50%",
+                width: 36, height: 36,
                 cursor: isSending ? "not-allowed" : "pointer",
                 padding: 0,
                 display: "flex",
                 alignItems: "center",
-                animation: isRecording ? "pulse 1s infinite" : "none",
+                justifyContent: "center",
+                flexShrink: 0,
+                boxShadow: isRecording ? "0 0 0 4px rgba(239,68,68,0.15)" : "none",
+                animation: isRecording ? "micPulse 1.2s ease-in-out infinite" : "none",
+                transition: "background 0.2s, box-shadow 0.2s, border 0.2s",
               }}
             >
-              {isRecording ? (
-                <MicOff size={20} style={{ color: "white" }} />
-              ) : (
-                <Mic size={20} style={{ color: "#f97316" }} />
-              )}
+              {isRecording
+                ? <MicOff size={18} style={{ color: "white" }} />
+                : <Mic size={18} style={{ color: isSending ? "#d1d5db" : "#f97316" }} />
+              }
             </button>
 
             <button
@@ -724,20 +743,25 @@ export default function Chatbot({ isOpen, onClose }) {
 
           {/* Recording Indicator */}
           {isRecording && (
-            <div style={{ marginTop: "8px", textAlign: "center" }}>
-              <p style={{ color: "#ef4444", fontSize: "12px", fontWeight: "600" }}>
-                🔴{" "}
-                {language === "ar"
-                  ? "جاري التسجيل... انقر على الميكروفون للإيقاف"
-                  : language === "ur"
-                  ? "ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں"
-                  : language === "hi"
-                  ? "रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें"
-                  : language === "es"
-                  ? "Grabando... Haz clic en el micrófono para detener"
-                  : language === "fr"
-                  ? "Enregistrement... Cliquez sur le micro pour arrêter"
-                  : "Recording... Click mic to stop"}
+            <div style={{
+              marginTop: 8,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              background: "#fff1f1", borderRadius: 12, padding: "6px 14px",
+              border: "1px solid rgba(239,68,68,0.2)",
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", background: "#ef4444",
+                display: "inline-block",
+                animation: "pulse 1s infinite",
+                flexShrink: 0,
+              }} />
+              <p style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, margin: 0 }}>
+                {language === "ar" ? "جاري التسجيل... انقر على الميكروفون للإيقاف"
+                : language === "ur" ? "ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں"
+                : language === "hi" ? "रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें"
+                : language === "es" ? "Grabando... Haz clic en el micrófono para detener"
+                : language === "fr" ? "Enregistrement... Cliquez sur le micro pour arrêter"
+                : "Recording — tap mic to stop"}
               </p>
             </div>
           )}

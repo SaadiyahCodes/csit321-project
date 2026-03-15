@@ -56,7 +56,13 @@ function TopNav({ customer }) {
         <img
           src={scrolled ? logo4 : logo3}
           alt="Gusto"
-          onClick={() => navigate("/")}
+          onClick={() => {
+            if (window.location.pathname === "/") {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+              navigate("/");
+            }
+          }}
           style={{
             height: 60, objectFit: "contain", cursor: "pointer",
             transition: "opacity 0.3s ease",
@@ -540,7 +546,9 @@ export default function LandingPage() {
   }, []);
 
   const filtered = restaurants.filter(r =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase())
+    r.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").includes(
+      searchQuery.toLowerCase().replace(/[^a-z0-9\s]/g, "")
+    )
   );
 
   return (

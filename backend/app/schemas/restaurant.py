@@ -8,6 +8,8 @@ class RestaurantBase(BaseModel):
     category: str | None = None
     rating: float | None = 0.0
     image: str | None = None
+    location: str | None = None
+    avg_price_range: str | None = None #eg: "$", "$$", "$$$"
 
 class RestaurantCreate(RestaurantBase):
     pass
@@ -17,6 +19,8 @@ class RestaurantUpdate(BaseModel):
     category: str | None = None
     rating: float | None = None
     image: str | None = None
+    location: str | None = None
+    avg_price_range: str | None = None
 
 class RestaurantResponse(RestaurantBase):
     id: int

@@ -1,13 +1,14 @@
 //src/routes/customer/LandingPage.jsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, UtensilsCrossed, ChevronDown, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { Search, UtensilsCrossed, ChevronDown, ChevronLeft, ChevronRight, Sparkles, MessageCircle} from "lucide-react";
 import RestaurantCard from "../../components/RestaurantCard";
 import LanguageSelector from "../../components/LanguageSelector";
 import TranslatedText from "../../components/TranslatedText";
 import FoodCursor from "../../components/FoodCursor";
 import ParticleBackground from "../../components/ParticleBackground";
 import Reveal from "../../components/Reveal";
+import LandingChatbot from "../../components/ChatbotLanding";
 import { useLanguage } from "../../context/LanguageContext";
 import { useCustomerAuth } from "../../context/CustomerAuthContext";
 import api from "../../api";
@@ -538,6 +539,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const restaurantsSectionRef = useRef(null);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     api.get("/api/restaurants/")
@@ -655,6 +657,42 @@ export default function LandingPage() {
           </p>
         </footer>
       </Reveal>
+
+       {/* Floating chatbot button */}
+      <button
+        onClick={() => setChatOpen(prev => !prev)}
+        title="Chat with Gusto AI"
+        style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          width: "56px",
+          height: "56px",
+          borderRadius: "50%",
+          background: "linear-gradient(to right, #f97316, #ea580c)",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 16px rgba(249,115,22,0.45)",
+          zIndex: 998,
+          transition: "transform 0.2s, box-shadow 0.2s",
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.transform = "scale(1.08)";
+          e.currentTarget.style.boxShadow = "0 6px 20px rgba(249,115,22,0.55)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.transform = "scale(1)";
+          e.currentTarget.style.boxShadow = "0 4px 16px rgba(249,115,22,0.45)";
+        }}
+      >
+        <MessageCircle size={24} style={{ color: "white" }} />
+      </button>
+ 
+      {/* Landing Chatbot */}
+      <LandingChatbot isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }

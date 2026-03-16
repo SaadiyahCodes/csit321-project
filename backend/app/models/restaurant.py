@@ -12,6 +12,10 @@ class Restaurant(Base):
     category = Column(String(100), nullable=True)
     rating = Column(Float, default=0.0)
     image = Column(String(500), nullable=True) #stores image URL
+    #Landing chatbot fields
+    location = Column(String(255), nullable=True)
+    avg_price_range = Column(String(10), nullable=True) #eg: "$", "$$", "$$$"
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # relationship to menu items

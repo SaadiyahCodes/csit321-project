@@ -15,7 +15,8 @@ from app.db.base import Base
 from app.routers import (
     auth, admin, menu, restaurant, session, selection, 
     chatbot, translation, menu_search, voice,
-    customer_auth, customer_profile, customer_orders, analytics
+    customer_auth, customer_profile, customer_orders, 
+    analytics, chatbot_landing
 )
 
 # Create tables
@@ -53,6 +54,7 @@ app.include_router(customer_auth.router)
 app.include_router(customer_profile.router)
 app.include_router(customer_orders.router)
 app.include_router(analytics.router)
+app.include_router(chatbot_landing.router)
 
 @app.get("/")
 def root():

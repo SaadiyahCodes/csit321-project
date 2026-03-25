@@ -1,11 +1,14 @@
 // src/components/LandingChatbot.jsx
 import { useState, useEffect, useRef } from "react";
-import { Send, X, Loader2, MapPin, Star, DollarSign } from "lucide-react";
+import { Send, X, Loader2, MapPin, Star, DollarSign, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {useLanguage} from "../context/LanguageContext";
 import api from "../api";
+import LanguageSelector from "./LanguageSelector";
 
 export default function LandingChatbot({ isOpen, onClose }) {
   const navigate = useNavigate();
+  const {language} = useLanguage();
 
   // Generate a stable conversation_id for this session
   const conversationIdRef = useRef(crypto.randomUUID());
@@ -14,6 +17,14 @@ export default function LandingChatbot({ isOpen, onClose }) {
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
+    () => localStorage.getItem("voiceReplyEnabled") === "true"
+  );
+
+  // Voice Recording
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const audioChunksRef = useRef([]);
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -32,6 +43,26 @@ export default function LandingChatbot({ isOpen, onClose }) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [isOpen]);
+
+  // Persist voice reply toggle
+  useEffect(() => {
+    localStorage.setItem("voiceReplyEnabled", voiceReplyEnabled);
+  }, [voiceReplyEnabled]);
+ 
+  // Shared TTS helper — used by text replies when toggle is on
+  const speakText = async (text) => {
+    try {
+      const response = await api.post("/api/voice/tts", null, {
+        params: { text, language },
+      });
+      if (response.data.success && response.data.audio) {
+        const audio = new Audio(`data:audio/mp3;base64,${response.data.audio}`);
+        audio.play();
+      }
+    } catch (err) {
+      console.error("TTS error:", err);
+    }
+  };
 
   const sendMessage = async (text) => {
     if (!text.trim()) return;
@@ -64,6 +95,10 @@ export default function LandingChatbot({ isOpen, onClose }) {
       };
 
       setMessages((prev) => [...prev, botMessage]);
+      // Speak the reply if voice toggle is on
+      if (voiceReplyEnabled) {
+        await speakText(response.data.response);
+      }
     } catch (error) {
       console.error("Landing chat error:", error);
       setMessages((prev) => [
@@ -96,6 +131,150 @@ export default function LandingChatbot({ isOpen, onClose }) {
     }
   };
 
+  // Voice Recording - START
+  const startRecording = async () => {
+    try {
+      console.log("🎤 Starting recording...");
+ 
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
+      });
+ 
+      audioChunksRef.current = [];
+ 
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4",
+      });
+ 
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+ 
+      recorder.onstop = async () => {
+        if (audioChunksRef.current.length > 0) {
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: recorder.mimeType,
+          });
+          await sendVoiceMessage(audioBlob);
+        } else {
+          alert("No audio was recorded. Please try again.");
+        }
+ 
+        stream.getTracks().forEach((track) => track.stop());
+      };
+ 
+      recorder.start(100);
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error("❌ Microphone access error:", error);
+      alert("Please allow microphone access to use voice chat");
+    }
+  };
+ 
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+ 
+  const sendVoiceMessage = async (audioBlob) => {
+    setIsSending(true);
+ 
+    try {
+      const reader = new FileReader();
+ 
+      reader.onloadend = async () => {
+        setIsTyping(true);
+        const base64Audio = reader.result.split(",")[1];
+ 
+        try {
+          // STT: transcribe audio to text
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.webm");
+
+          const sttResponse = await api.post("/api/voice/stt", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            params: { language },
+          });
+ 
+          if (!sttResponse.data.success) {
+            throw new Error(sttResponse.data.error || "STT failed");
+          }
+ 
+          const transcribedText = sttResponse.data.text;
+ 
+          const userMessage = {
+            id: `user-voice-${Date.now()}`,
+            text: transcribedText,
+            sender: "user",
+            timestamp: new Date(),
+            isVoice: true,
+          };
+ 
+          setMessages((prev) => [...prev, userMessage]);
+ 
+          // Send transcribed text to landing chat
+          const chatResponse = await api.post("/api/landing/chat", {
+            message: transcribedText,
+            conversation_id: conversationIdRef.current,
+            language: language,
+          });
+ 
+          const botMessage = {
+            id: `bot-voice-${Date.now()}`,
+            text: chatResponse.data.response,
+            sender: "bot",
+            timestamp: new Date(),
+            suggestedRestaurants: chatResponse.data.suggested_restaurants || [],
+          };
+ 
+          setMessages((prev) => [...prev, botMessage]);
+ 
+          // TTS: speak the bot reply
+          if (chatResponse.data.response) {
+            try {
+              const ttsResponse = await api.post("/api/voice/tts", null, {
+                params: { text: chatResponse.data.response, language },
+              });
+              if (ttsResponse.data.success && ttsResponse.data.audio) {
+                const audio = new Audio(`data:audio/mp3;base64,${ttsResponse.data.audio}`);
+                audio.play();
+              }
+            } catch (ttsError) {
+              console.error("TTS error:", ttsError);
+            }
+          }
+        } catch (apiError) {
+          console.error("❌ API call failed:", apiError);
+          alert("Voice message failed. Please try typing instead.");
+        } finally {
+          setIsTyping(false);
+          setIsSending(false);
+        }
+      };
+ 
+      reader.onerror = () => {
+        alert("Failed to process audio. Please try again.");
+        setIsSending(false);
+      };
+ 
+      reader.readAsDataURL(audioBlob);
+    } catch (error) {
+      console.error("❌ Voice message error:", error);
+      alert("Voice message failed. Please try typing instead.");
+      setIsSending(false);
+    }
+  };
+
   // Matches RestaurantCard navigation and App.jsx route definition
   const handleRestaurantClick = (restaurant) => {
     onClose();
@@ -107,6 +286,10 @@ export default function LandingChatbot({ isOpen, onClose }) {
   return (
     <>
       <style>{`
+        @keyframes micPulse {
+          0%, 100% { box-shadow: 0 0 0 4px rgba(239,68,68,0.15); }
+          50%       { box-shadow: 0 0 0 8px rgba(239,68,68,0.08); }
+        }
         @keyframes bounce {
           0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
           40%           { transform: scale(1.1); opacity: 1; }
@@ -114,6 +297,10 @@ export default function LandingChatbot({ isOpen, onClose }) {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.5; }
         }
         .landing-restaurant-card:hover {
           background-color: #fff7ed !important;
@@ -136,6 +323,7 @@ export default function LandingChatbot({ isOpen, onClose }) {
 
       {/* Chatbot Panel */}
       <div
+        dir="ltr"
         style={{
           position: "fixed",
           bottom: "80px",
@@ -173,23 +361,50 @@ export default function LandingChatbot({ isOpen, onClose }) {
             </p>
           </div>
 
-          <button
-            onClick={onClose}
-            style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "background 0.2s",
-            }}
-          >
-            <X size={18} style={{ color: "white" }} />
-          </button>
+          {/* Voice Toggle & Close Button */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <LanguageSelector variant="compact"/>
+            {/* Voice Reply Toggle */}
+            <button
+              onClick={() => setVoiceReplyEnabled((prev) => !prev)}
+              title={voiceReplyEnabled ? "Voice replies on" : "Voice replies off"}
+              style={{
+                background: voiceReplyEnabled ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
+                border: "1px solid rgba(255,255,255,0.4)",
+                borderRadius: "50%",
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "background 0.2s",
+              }}
+            >
+              {voiceReplyEnabled
+                ? <Volume2 size={16} style={{ color: "white" }} />
+                : <VolumeX size={16} style={{ color: "rgba(255,255,255,0.7)" }} />
+              }
+            </button>
+ 
+            <button
+              onClick={onClose}
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                borderRadius: "50%",
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "background 0.2s",
+              }}
+            >
+              <X size={18} style={{ color: "white" }} />
+            </button>
+          </div>
         </div>
 
         {/* Messages Container */}
@@ -204,6 +419,25 @@ export default function LandingChatbot({ isOpen, onClose }) {
             gap: "12px",
           }}
         >
+          {/* Voice reply indicator banner */}
+          {voiceReplyEnabled && (
+            <div style={{
+              backgroundColor: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: "12px",
+              padding: "8px 14px",
+              fontSize: "11px",
+              color: "#166534",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}>
+              <Volume2 size={12} />
+              Voice replies are on. I'll read my responses aloud.
+            </div>
+          )}
+
           {/* Welcome message */}
           {messages.length === 0 && (
             <div style={{ textAlign: "center", marginTop: "40px" }}>
@@ -217,10 +451,31 @@ export default function LandingChatbot({ isOpen, onClose }) {
                 }}
               >
                 <p style={{ fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
-                  Hi! I'm your dining concierge
+                  👋{" "}
+                  {language === "ar"
+                    ? "مرحباً! أنا مساعدك لاختيار المطعم"
+                    : language === "ur"
+                    ? "ہیلو! میں آپ کا ریستوران گائیڈ ہوں"
+                    : language === "hi"
+                    ? "नमस्ते! मैं आपका रेस्तरां सहायक हूं"
+                    : language === "es"
+                    ? "¡Hola! Soy tu guía de restaurantes"
+                    : language === "fr"
+                    ? "Bonjour! Je suis votre guide restaurant"
+                    : "Hi! I'm your dining concierge"}
                 </p>
                 <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
-                  Tell me your budget, location, or cuisine and I'll find the perfect spot!
+                  {language === "ar"
+                    ? "أخبرني عن ميزانيتك أو موقعك أو نوع المطبخ وسأجد لك المكان المثالي!"
+                    : language === "ur"
+                    ? "مجھے اپنا بجٹ، مقام یا کھانے کی قسم بتائیں اور میں بہترین جگہ ڈھونڈوں گا!"
+                    : language === "hi"
+                    ? "मुझे अपना बजट, स्थान या व्यंजन बताएं और मैं सही जगह ढूंढूंगा!"
+                    : language === "es"
+                    ? "¡Dime tu presupuesto, ubicación o cocina y encontraré el lugar perfecto!"
+                    : language === "fr"
+                    ? "Dites-moi votre budget, emplacement ou cuisine et je trouverai l'endroit parfait !"
+                    : "Tell me your budget, location, or cuisine and I'll find the perfect spot!"}
                 </p>
               </div>
             </div>
@@ -256,6 +511,7 @@ export default function LandingChatbot({ isOpen, onClose }) {
                       color: "#111827",
                       lineHeight: "1.5",
                       whiteSpace: "pre-wrap",
+                      direction: language === "ar" || language === "ur" ? "rtl" : "ltr",
                     }}
                   >
                     {msg.text}
@@ -388,8 +644,20 @@ export default function LandingChatbot({ isOpen, onClose }) {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me anything..."
-              disabled={isSending}
+              placeholder={
+                language === "ar"
+                  ? "اسألني أي شيء..."
+                  : language === "ur"
+                  ? "مجھ سے کچھ بھی پوچھیں..."
+                  : language === "hi"
+                  ? "मुझसे कुछ भी पूछें..."
+                  : language === "es"
+                  ? "Pregúntame lo que quieras..."
+                  : language === "fr"
+                  ? "Demandez-moi ce que vous voulez..."
+                  : "Ask me anything..."
+              }
+              disabled={isSending || isRecording}
               style={{
                 flex: 1,
                 border: "none",
@@ -397,15 +665,41 @@ export default function LandingChatbot({ isOpen, onClose }) {
                 backgroundColor: "transparent",
                 fontSize: "14px",
                 color: "#111827",
+                direction: language === "ar" || language === "ur" ? "rtl" : "ltr",
               }}
             />
             <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isSending}
+              style={{
+                background: isRecording ? "#ef4444" : "transparent",
+                border: isRecording ? "2px solid rgba(239,68,68,0.4)" : "2px solid transparent",
+                borderRadius: "50%",
+                width: 36, height: 36,
+                cursor: isSending ? "not-allowed" : "pointer",
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                boxShadow: isRecording ? "0 0 0 4px rgba(239,68,68,0.15)" : "none",
+                animation: isRecording ? "micPulse 1.2s ease-in-out infinite" : "none",
+                transition: "background 0.2s, box-shadow 0.2s, border 0.2s",
+              }}
+            >
+              {isRecording
+                ? <MicOff size={18} style={{ color: "white" }} />
+                : <Mic size={18} style={{ color: isSending ? "#d1d5db" : "#f97316" }} />
+              }
+            </button>
+
+            <button
               onClick={handleSend}
-              disabled={!inputText.trim() || isSending}
+              disabled={!inputText.trim() || isSending || isRecording}
               style={{
                 background: "none",
                 border: "none",
-                cursor: inputText.trim() && !isSending ? "pointer" : "not-allowed",
+                cursor: inputText.trim() && !isSending && !isRecording ? "pointer" : "not-allowed",
                 padding: 0,
                 display: "flex",
                 alignItems: "center",
@@ -414,10 +708,35 @@ export default function LandingChatbot({ isOpen, onClose }) {
               {isSending ? (
                 <Loader2 size={20} style={{ color: "#f97316", animation: "spin 1s linear infinite" }} />
               ) : (
-                <Send size={20} style={{ color: inputText.trim() ? "#f97316" : "#d1d5db" }} />
+                <Send size={20} style={{ color: inputText.trim() && !isSending && !isRecording ? "#f97316" : "#d1d5db" }} />
               )}
             </button>
           </div>
+
+          {/* Recording Indicator */}
+          {isRecording && (
+            <div style={{
+              marginTop: 8,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              background: "#fff1f1", borderRadius: 12, padding: "6px 14px",
+              border: "1px solid rgba(239,68,68,0.2)",
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: "50%", background: "#ef4444",
+                display: "inline-block",
+                animation: "pulse 1s infinite",
+                flexShrink: 0,
+              }} />
+              <p style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, margin: 0 }}>
+                {language === "ar" ? "جاري التسجيل... انقر على الميكروفون للإيقاف"
+                : language === "ur" ? "ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں"
+                : language === "hi" ? "रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें"
+                : language === "es" ? "Grabando... Haz clic en el micrófono para detener"
+                : language === "fr" ? "Enregistrement... Cliquez sur le micro pour arrêter"
+                : "Recording — tap mic to stop"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </>

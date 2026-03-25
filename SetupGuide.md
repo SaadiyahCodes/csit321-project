@@ -36,15 +36,16 @@ Once you run `git pull` , do the following steps:
 
 Run `netstat -ano | findstr :8000` and kill any process running on the same port.
 
-## Backend Changes (10/1/2026):
-### Migrating to Python Version 3.10.11
+### Changing Python Versions
+If you're using an outdated version (3.10.11) and want to switch python versions (to for example 3.12.1)
 
-- Download 3.10.11 from python.org
+- Download version from python.org
 - Delete existing `venv` folder and run `deactivate` in terminal if activated.
-- Create a new venv using python 3.10.11: `py -3.10 -m venv venv`
-- Ensure python version shows 3.10.11 (`python --version`)
-- upgrade pip if needed `python -m pip install --upgrade pip`
-- run `pip install -r requirements1.txt` (latest file)
+- Change to backend directory: `cd backend`
+- Create a new venv using python 3.12: `py -3.12 -m venv venv`
+- Activate venv and ensure python version shows 3.12.1 (`python --version`)
+- (optional) upgrade pip if needed `python -m pip install --upgrade pip`
+- run `pip install -r requirements.txt` (latest file)
 
-### **Note**: Whenever you're installing a new library, add the name to `requirements1.txt` manually. 
+### **Note**: Whenever you're installing a new library, add the name to `requirements.txt` manually. 
 You may also additionally run `pip freeze >> requirements.lock` to update the lock file which will have the exact versions listed (for debugging) but should **not** be installed from in your venv.

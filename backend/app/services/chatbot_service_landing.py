@@ -112,6 +112,7 @@ Always respond with valid JSON only, no text outside the JSON:
 FIELD RULES:
 - "response": natural, friendly text — no emojis, no markdown
 - "suggested_restaurants": restaurants you are recommending in this turn. Empty list [] if just chatting or asking a clarifying question.
+- "suggested_restaurants": ONLY include restaurants you are recommending FOR THE FIRST TIME in this turn. If the user is confirming, asking follow-up questions, or you already suggested these restaurants in a previous turn, return []
 - Only include restaurants you actually mention in "response"
 
 EXAMPLE:

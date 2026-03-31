@@ -184,9 +184,8 @@ class ChatbotService:
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=full_context,
-                generation_config={
-                    'temperature': 0,
-                    'max_output_tokens': 150
+                config={
+                    'temperature': 0
                 }
             )
             ai_message = response.text.strip()            

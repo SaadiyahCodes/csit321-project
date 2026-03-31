@@ -518,6 +518,8 @@ export default function AdminAnalytics() {
   const [baselineInput, setBaselineInput] = useState('');
   const [llmSummary, setLlmSummary] = useState(null);
   const [llmLoading, setLlmLoading] = useState(false);
+  const [cache, setCache] = useState({});
+  const [showLlmSummary, setShowLlmSummary] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user?.restaurant_id) {
@@ -528,21 +530,29 @@ export default function AdminAnalytics() {
     }
   }, [dateRange, authLoading, user?.restaurant_id]);
 
+  // Clear AI summary when dateRange changes
   useEffect(() => {
-      setData(null);
+      setLlmSummary(null);
+      setShowLlmSummary(false);
   }, [dateRange]);
 
   const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await analyticsService.getDashboard(user.restaurant_id, dateRange);
-      setData(result);
-    } catch (err) {
-      setError(err.message || 'Failed to load analytics');
-    } finally {
-      setLoading(false);
-    }
+      if (cache[dateRange]) {
+          setData(cache[dateRange]);
+          setLoading(false);
+          return;
+      }
+      try {
+          setLoading(true);
+          setError(null);
+          const result = await analyticsService.getDashboard(user.restaurant_id, dateRange);
+          setData(result);
+          setCache(prev => ({ ...prev, [dateRange]: result }));
+      } catch (err) {
+          setError(err.message || 'Failed to load analytics');
+      } finally {
+          setLoading(false);
+      }
   };
 
   const fetchLLMSummary = async () => {
@@ -669,29 +679,39 @@ export default function AdminAnalytics() {
                   </span>
 
                 </div>
-                <button
-                  onClick={() => { setLlmSummary(null); fetchLLMSummary(); }}
-                  disabled={llmLoading}
-                  title="Generate AI summary"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    background: llmLoading ? '#F3F4F6' : 'linear-gradient(135deg, #F97316, #EA580C)',
-                    color: llmLoading ? '#9CA3AF' : 'white',
-                    border: 'none', borderRadius: 8,
-                    padding: '6px 14px', fontSize: 12, fontWeight: 600,
-                    cursor: llmLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {llmLoading
-                    ? <><span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span> Thinking...</>
-                    : <>✦ {llmSummary ? 'Regenerate' : 'Generate AI Summary'}</>
-                  }
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {llmSummary && (
+                        <button
+                            onClick={() => setShowLlmSummary(p => !p)}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid #FED7AA',
+                                borderRadius: 8, padding: '6px 14px',
+                                fontSize: 12, fontWeight: 600,
+                                color: '#EA580C', cursor: 'pointer'
+                            }}
+                        >
+                            {showLlmSummary ? 'Show Original' : 'Show AI'}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => { setShowLlmSummary(true); setLlmSummary(null); fetchLLMSummary(); }}
+                        disabled={llmLoading}
+                        style={{
+                                background: 'transparent',
+                                border: '1px solid #FED7AA',
+                                borderRadius: 8, padding: '6px 14px',
+                                fontSize: 12, fontWeight: 600,
+                                color: '#EA580C', cursor: 'pointer'
+                            }}
+                    >
+                        {llmLoading ? <>⟳ Thinking...</> : <>✦ {llmSummary ? 'Regenerate' : 'Generate AI Summary'}</>}
+                    </button>
+                </div>
               </div>
 
               {/* Content: LLM or rule-based */}
-              {llmSummary ? (
+              {showLlmSummary && llmSummary ? (
                   <div>
                       {llmSummary.replace(/[#*_`]/g, '').split('||BREAK||').map((para, i) => (
                           <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0', fontSize: 13, color: '#78350F', lineHeight: 1.7 }}>
@@ -700,13 +720,13 @@ export default function AdminAnalytics() {
                       ))}
                   </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {summary.map((line, i) => (
-                    <p key={i} style={{ margin: 0, fontSize: 14, color: '#78350F', lineHeight: 1.6, fontWeight: i === 0 ? 600 : 400 }}>
-                      {line}
-                    </p>
-                  ))}
-                </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {summary.map((line, i) => (
+                          <p key={i} style={{ margin: 0, fontSize: 14, color: '#78350F', lineHeight: 1.6, fontWeight: i === 0 ? 600 : 400 }}>
+                              {line}
+                          </p>
+                      ))}
+                  </div>
               )}
             </div>
           )}

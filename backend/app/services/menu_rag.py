@@ -1,40 +1,70 @@
+#app/services/menu_rag.py
 from typing import List, Dict, Optional
+
+#Maps dietary preference to ingredients/keywords that violate it
+DIETARY_VIOLATION_KEYWORDS = {
+    "vegetarian": ["chicken", "beef", "lamb", "pork", "meat", "fish", "prawn", "shrimp", "bacon", "turkey"],
+    "vegan": ["chicken", "beef", "lamb", "pork", "meat", "fish", "prawn", "shrimp", "bacon", "turkey",
+              "dairy", "milk", "cheese", "butter", "cream", "egg", "honey"],
+    "gluten-free": ["wheat", "flour", "bread", "pasta", "gluten", "barley", "rye"],
+    "dairy-free": ["milk", "cheese", "butter", "cream", "dairy", "yogurt"],
+    "nut-free": ["nuts", "almond", "cashew", "walnut", "pistachio", "pecan", "hazelnut"],
+    "halal": ["pork", "bacon", "ham", "lard", "alcohol", "wine", "beer"],
+    "kosher": ["pork", "bacon", "ham", "shellfish", "shrimp", "prawn", "crab", "lobster"],
+    "pescatarian": ["chicken", "beef", "lamb", "pork", "meat", "bacon", "turkey"],
+    "paleo": ["wheat", "flour", "bread", "pasta", "dairy", "milk", "cheese", "grain", "rice", "bean", "legume"],
+    "keto": ["sugar", "bread", "pasta", "rice", "wheat", "flour", "potato", "corn"],
+}
 
 class MenuRAG:
     """Menu Retrieval-Augmented Generation - Smart menu search"""
     
     def __init__(self, menu_items: List[Dict]):
         self.menu_items = menu_items
-    
-    def search_by_keywords(self, keywords: List[str], exclude_allergens: List[str] = None) -> List[Dict]:
-        """
-        Search menu by keywords and filter out allergens
+
+    def _violates_dietary(self, item: Dict, dietary_prefs: List[str]) -> bool:
+        """Check if item violates any dietary preference"""
+        if not dietary_prefs:
+            return False
         
-        Example: keywords=["spicy", "chicken"], exclude_allergens=["dairy"]
-        """
+        searchable = f"{item['name']} {item.get('description', '')} {item.get('ingredients', '')}".lower()
+        # Also check allergens field
+        item_allergens = " ".join(item.get('allergens', [])).lower()
+        full_text = f"{searchable} {item_allergens}"
+        
+        for pref in dietary_prefs:
+            pref_lower = pref.lower()
+            violation_keywords = DIETARY_VIOLATION_KEYWORDS.get(pref_lower, [])
+            if any(kw in full_text for kw in violation_keywords):
+                return True
+        
+        return False
+    
+    def search_by_keywords(self, keywords: List[str], exclude_allergens: List[str] = None, exclude_dietary: List[str] = None) -> List[Dict]:
         results = []
         
         for item in self.menu_items:
-            # Check if item contains allergens
+            #Check if item contains allergens
             if exclude_allergens:
                 item_allergens = [a.lower() for a in item.get('allergens', [])]
                 if any(allergen.lower() in item_allergens for allergen in exclude_allergens):
-                    continue  # Skip this item (has allergen)
+                    continue  #Skip this item (has allergen)
             
-            # Check if keywords match
+            #Check if item violates dietary preferences
+            if self._violates_dietary(item, exclude_dietary or []):
+                continue  #Skip this item (violates dietary)
+            
             searchable_text = f"{item['name']} {item['description']} {item.get('ingredients', '')}".lower()
-            
             matches = sum(1 for keyword in keywords if keyword.lower() in searchable_text)
             
             if matches > 0:
                 results.append({
                     **item,
-                    'relevance_score': matches  # How many keywords matched
+                    'relevance_score': matches
                 })
         
-        # Sort by relevance (most matches first)
+        #Sort by relevance (most matches first)
         results.sort(key=lambda x: x['relevance_score'], reverse=True)
-        
         return results
     
     def search_by_category(self, category: str, exclude_allergens: List[str] = None) -> List[Dict]:
@@ -75,19 +105,15 @@ class MenuRAG:
         
         return results
     
-    def get_safe_items(self, exclude_allergens: List[str]) -> List[Dict]:
-        """Get all items safe for customer with allergies"""
+    def get_safe_items(self, exclude_allergens: List[str], exclude_dietary: List[str] = None) -> List[Dict]:
+        """Get all items safe for customer with allergies/dietary restrictions"""
         safe_items = []
         
         for item in self.menu_items:
             item_allergens = [a.lower() for a in item.get('allergens', [])]
-            
-            # Check if item contains any of the allergens to avoid
             is_safe = not any(allergen.lower() in item_allergens for allergen in exclude_allergens)
-            
-            if is_safe:
+            if is_safe and not self._violates_dietary(item, exclude_dietary or []):
                 safe_items.append(item)
-        
         return safe_items
     
     def get_recommendations(self, preferences: Dict, exclude_allergens: List[str] = None) -> List[Dict]:

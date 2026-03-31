@@ -6,12 +6,16 @@ import api from '../../api';
 
 const CustomerProfile = () => {
   const navigate = useNavigate();
-  const {customer, logout, loading: authLoading} = useCustomerAuth();
+  const { customer, logout, loading: authLoading, fetchCustomer } = useCustomerAuth();
 
   const [isEditingAllergens, setIsEditingAllergens] = useState(false);
   const [isEditingDietary, setIsEditingDietary] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [tempName, setTempName] = useState('');
+  const [tempPhone, setTempPhone] = useState('');
+  const [customAllergen, setCustomAllergen] = useState('');
 
   //profile data
   const [profile, setProfile] = useState(null);
@@ -75,6 +79,7 @@ const CustomerProfile = () => {
       });
       setAllergens([...tempAllergens]);
       setIsEditingAllergens(false);
+      await fetchCustomer();
     } catch (error) {
       console.error('Error saving allergens:', error);
       alert('Failed to save allergens. Please try again.');
@@ -85,6 +90,7 @@ const CustomerProfile = () => {
 
   const handleCancelAllergens = () => {
     setTempAllergens([...allergens]);
+    setCustomAllergen('');
     setIsEditingAllergens(false);
   };
 
@@ -96,6 +102,7 @@ const CustomerProfile = () => {
       });
       setDietaryPrefs([...tempDietaryPrefs]);
       setIsEditingDietary(false);
+      await fetchCustomer();
     } catch (error) {
       console.error('Error saving dietary preferences:', error);
       alert('Failed to save dietary preferences. Please try again.');
@@ -125,6 +132,33 @@ const CustomerProfile = () => {
     }
   };
 
+  // CHANGE 1: handleSaveInfo — saves name and phone, then refreshes customer context
+  const handleSaveInfo = async () => {
+    try {
+      setSaving(true);
+      await api.put('/api/customer/profile/', {
+        name: tempName,
+        phone_number: tempPhone
+      });
+      await fetchCustomer();
+      setIsEditingInfo(false);
+    } catch (error) {
+      console.error('Error saving info:', error);
+      alert('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // CHANGE 2: addCustomAllergen — adds a user-typed allergen to tempAllergens
+  const addCustomAllergen = () => {
+    const val = customAllergen.trim().toLowerCase();
+    if (val && !tempAllergens.includes(val)) {
+      setTempAllergens([...tempAllergens, val]);
+    }
+    setCustomAllergen('');
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/');
@@ -151,7 +185,7 @@ const CustomerProfile = () => {
       backgroundColor: '#f3f4f6',
       paddingBottom: '40px'
     }}>
-      {/* Header */}
+      {/* Header — unchanged */}
       <div style={{
         background: 'linear-gradient(to right, #f97316, #ea580c)',
         padding: '24px 20px',
@@ -215,7 +249,13 @@ const CustomerProfile = () => {
         padding: '24px 20px'
       }}>
         
-        {/* Profile Info Card */}
+        {/*
+          CHANGE 1: Profile Info Card
+          - Added Edit button top-right
+          - When editing: shows name + phone inputs (email stays read-only)
+          - Save calls handleSaveInfo → PUT /api/customer/profile/ → fetchCustomer()
+          - Cancel resets to current customer values
+        */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -225,51 +265,147 @@ const CustomerProfile = () => {
         }}>
           <div style={{
             display: 'flex',
-            alignItems: 'center',
-            gap: '16px',
-            marginBottom: '20px'
+            justifyContent: 'space-between',
+            alignItems: 'flex-start'
           }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <User size={40} color="white" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <User size={40} color="white" />
+              </div>
+              <div>
+                {!isEditingInfo ? (
+                  <>
+                    <h2 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: '#2d3748' }}>
+                      {customer?.name || 'Customer'}
+                    </h2>
+                    <p style={{ fontSize: '14px', color: '#718096', margin: '4px 0' }}>
+                      {customer?.email}
+                    </p>
+                    {customer?.phone_number && customer.phone_number !== 'string' && (
+                      <p style={{ fontSize: '14px', color: '#718096', margin: '4px 0' }}>
+                        {customer.phone_number}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <input
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      placeholder="Name"
+                      style={{
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        width: '220px'
+                      }}
+                    />
+                    <input
+                      value={tempPhone}
+                      onChange={(e) => setTempPhone(e.target.value)}
+                      placeholder="Phone number"
+                      style={{
+                        border: '1px solid #d1d5db',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        fontSize: '14px',
+                        outline: 'none',
+                        width: '220px'
+                      }}
+                    />
+                    <p style={{ fontSize: '14px', color: '#718096', margin: 0 }}>
+                      {customer?.email}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: 'bold',
-                margin: '0 0 8px 0',
-                color: '#2d3748'
-              }}>
-                {customer?.name || 'Customer'}
-              </h2>
-              <p style={{
-                fontSize: '14px',
-                color: '#718096',
-                margin: '4px 0'
-              }}>
-                {customer?.email}
-              </p>
-              {customer?.phone_number && customer.phone_number !== 'string' && (
-                <p style={{
+
+            {/* Edit / Save / Cancel buttons for profile info */}
+            {!isEditingInfo ? (
+              <button
+                onClick={() => {
+                  setTempName(customer?.name || '');
+                  setTempPhone(customer?.phone_number || '');
+                  setIsEditingInfo(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#f97316',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                   fontSize: '14px',
-                  color: '#718096',
-                  margin: '4px 0'
-                }}>
-                  {customer.phone_number}
-                </p>
-              )}
-            </div>
+                  fontWeight: '600'
+                }}
+              >
+                <Edit2 size={16} /> Edit
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleSaveInfo}
+                  disabled={saving}
+                  style={{
+                    background: saving ? '#cbd5e0' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setIsEditingInfo(false)}
+                  disabled={saving}
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  <X size={16} /> Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Allergens Card */}
+        {/*
+          CHANGE 2: Allergens Card
+          - Edit mode outer div changed to flexDirection column
+          - First row: all preset allergen toggle buttons + custom allergens rendered as removable tags
+          - Second row: text input + Add button for custom allergens
+          - Cancel also clears the customAllergen input state
+        */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -353,6 +489,7 @@ const CustomerProfile = () => {
           </div>
 
           {!isEditingAllergens ? (
+            // View mode — unchanged
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {allergens.length > 0 ? (
                 allergens.map((allergen, index) => (
@@ -376,33 +513,94 @@ const CustomerProfile = () => {
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {availableAllergens.map((allergen, index) => (
+            // Edit mode — column layout: buttons row + custom input row
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Row 1: preset allergen toggles + any custom allergens already added */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {availableAllergens.map((allergen, index) => (
+                  <button
+                    key={index}
+                    onClick={() => toggleAllergen(allergen)}
+                    disabled={saving}
+                    style={{
+                      backgroundColor: tempAllergens.includes(allergen) ? '#fee2e2' : '#f3f4f6',
+                      color: tempAllergens.includes(allergen) ? '#dc2626' : '#4b5563',
+                      border: tempAllergens.includes(allergen) ? '2px solid #dc2626' : '2px solid transparent',
+                      padding: '8px 16px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s',
+                      textTransform: 'capitalize'
+                    }}
+                  >
+                    {allergen}
+                  </button>
+                ))}
+                {/* Custom allergens (not in preset list) shown as removable tags */}
+                {tempAllergens
+                  .filter(a => !availableAllergens.includes(a))
+                  .map((allergen, index) => (
+                    <button
+                      key={`custom-${index}`}
+                      onClick={() => toggleAllergen(allergen)}
+                      disabled={saving}
+                      style={{
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        border: '2px solid #dc2626',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: saving ? 'not-allowed' : 'pointer',
+                        textTransform: 'capitalize'
+                      }}
+                    >
+                      {allergen} ✕
+                    </button>
+                  ))}
+              </div>
+
+              {/* Row 2: custom allergen input */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  value={customAllergen}
+                  onChange={(e) => setCustomAllergen(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addCustomAllergen(); }}
+                  placeholder="Add custom allergen..."
+                  style={{
+                    border: '1px solid #d1d5db',
+                    borderRadius: '20px',
+                    padding: '8px 16px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    flex: 1
+                  }}
+                />
                 <button
-                  key={index}
-                  onClick={() => toggleAllergen(allergen)}
+                  onClick={addCustomAllergen}
                   disabled={saving}
                   style={{
-                    backgroundColor: tempAllergens.includes(allergen) ? '#fee2e2' : '#f3f4f6',
-                    color: tempAllergens.includes(allergen) ? '#dc2626' : '#4b5563',
-                    border: tempAllergens.includes(allergen) ? '2px solid #dc2626' : '2px solid transparent',
-                    padding: '8px 16px',
+                    background: '#f97316',
+                    color: 'white',
+                    border: 'none',
                     borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '500',
+                    padding: '8px 20px',
                     cursor: saving ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                    textTransform: 'capitalize'
+                    fontSize: '14px',
+                    fontWeight: '600'
                   }}
                 >
-                  {allergen}
+                  Add
                 </button>
-              ))}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Dietary Preferences Card */}
+        {/* Dietary Preferences Card — unchanged */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -535,7 +733,7 @@ const CustomerProfile = () => {
           )}
         </div>
 
-        {/* Order History Card */}
+        {/* Order History Card — unchanged */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -602,7 +800,6 @@ const CustomerProfile = () => {
                     })}
                   </p>
                   
-                  {/* Items List */}
                   {order.items && order.items.length > 0 ? (
                     <div style={{
                       fontSize: '14px',

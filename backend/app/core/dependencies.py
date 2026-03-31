@@ -122,3 +122,32 @@ def get_selection_customer(
     
     customer = db.query(Customer).filter(Customer.email == email).first()
     return customer.id if customer else None
+
+def get_optional_customer(
+    authorization: str | None = Header(None),
+    db: Session = Depends(get_db)
+) -> Customer | None:
+    """
+    Returns the Customer object if a valid customer token is present.
+    Returns None for guests. Used where auth is optional (e.g. chatbot).
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    
+    token = authorization.replace("Bearer ", "")
+    payload = decode_access_token(token)
+    
+    if not payload:
+        return None
+    
+    email: str | None = payload.get("sub")
+    user_type: str | None = payload.get("type")
+    
+    if user_type != "customer":
+        return None
+    
+    customer = db.query(Customer).filter(Customer.email == email).first()
+    if not customer or not customer.is_active:
+        return None
+    
+    return customer

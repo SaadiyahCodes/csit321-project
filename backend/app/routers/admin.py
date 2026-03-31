@@ -8,6 +8,7 @@ from app.schemas.restaurant import RestaurantResponse, RestaurantUpdate
 from app.schemas.menu import MenuItemResponse, MenuItemCreate, MenuItemUpdate
 from app.crud import restaurant as restaurant_crud
 from app.crud import menu as menu_crud
+from app.services.chatbot_service import chatbot_service
 
 # AR Model Validator
 def validate_ar_model_url(ar_model_url: str | None):
@@ -105,7 +106,7 @@ def create_my_menu_item(
     
     if not created_item:
         raise HTTPException(status_code=400, detail="Failed to create menu item")
-    
+    chatbot_service.invalidate_menu_cache(current_user.restaurant_id)
     return created_item
 
 
@@ -125,7 +126,7 @@ def update_my_menu_item(
             status_code=404,
             detail="Menu item not found or doesn't belong to your restaurant"
         )
-    
+    chatbot_service.invalidate_menu_cache(current_user.restaurant_id)
     return item
 
 
@@ -143,5 +144,5 @@ def delete_my_menu_item(
             status_code=404,
             detail="Menu item not found or doesn't belong to your restaurant"
         )
-    
+    chatbot_service.invalidate_menu_cache(current_user.restaurant_id)
     return {"message": "Menu item deleted successfully"}

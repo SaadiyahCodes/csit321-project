@@ -1,3 +1,4 @@
+#app/routers/customer_profile.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -20,6 +21,11 @@ async def get_customer_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer profile not found"
         )
+    
+    #Attach customer fields for the response
+    profile.name = current_customer.name
+    profile.email = current_customer.email
+    profile.phone_number = current_customer.phone_number
     return profile
 
 #UPDATE CUSTOMER PROFILE
@@ -29,13 +35,23 @@ async def update_customer_profile(
     current_customer: Customer = Depends(get_current_active_customer),
     db: Session = Depends(get_db)
 ):
-    
+    if profile_update.name is not None:
+        current_customer.name = profile_update.name
+    if profile_update.phone_number is not None:
+        current_customer.phone_number = profile_update.phone_number
+    db.commit()
+    db.refresh(current_customer)
+
     updated_profile = profile_crud.update_customer_profile(db, current_customer.id, profile_update)
     if not updated_profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer profile not found"
         )
+    
+    updated_profile.name = current_customer.name
+    updated_profile.email = current_customer.email
+    updated_profile.phone_number = current_customer.phone_number
     return updated_profile
 
 # Get available allergens and dietary preferences

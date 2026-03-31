@@ -1,26 +1,23 @@
-// src/components/Chatbot.jsx
-import { useCustomerAuth } from "../context/CustomerAuthContext";
+// src/components/LandingChatbot.jsx
 import { useState, useEffect, useRef } from "react";
-import { Send, Mic, X, Loader2, MicOff, Volume2, VolumeX } from "lucide-react";
-import { useSession } from "../context/SessionContext";
-import { useLanguage } from "../context/LanguageContext";
-import LanguageSelector from "./LanguageSelector";
-import api from "../api";
+import { Send, X, Loader2, MapPin, Star, DollarSign, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {useLanguage} from "../context/LanguageContext";
+import api from "../api";
+import LanguageSelector from "./LanguageSelector";
 
-export default function Chatbot({ isOpen, onClose }) {
-  const { customer, profile } = useCustomerAuth();
-
+export default function LandingChatbot({ isOpen, onClose }) {
   const navigate = useNavigate();
-  const { sessionId, restaurantId } = useSession();
-  const { language } = useLanguage();
+  const {language} = useLanguage();
 
-  // UI State
+  // Generate a stable conversation_id for this session
+  const conversationIdRef = useRef(crypto.randomUUID());
+
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
     () => localStorage.getItem("voiceReplyEnabled") === "true"
   );
@@ -29,11 +26,9 @@ export default function Chatbot({ isOpen, onClose }) {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const audioChunksRef = useRef([]);
 
-  // Refs
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -42,44 +37,18 @@ export default function Chatbot({ isOpen, onClose }) {
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history when opened
+  // Focus input when opened
   useEffect(() => {
-    if (isOpen && sessionId) {
-      loadChatHistory();
+    if (isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 100);
     }
-  }, [isOpen, sessionId]);
+  }, [isOpen]);
 
   // Persist voice reply toggle
   useEffect(() => {
     localStorage.setItem("voiceReplyEnabled", voiceReplyEnabled);
   }, [voiceReplyEnabled]);
-
-  const loadChatHistory = async () => {
-    try {
-      const response = await api.get(`/api/chatbot/history/${sessionId}`);
-      const history = response.data.messages || [];
-
-      const formattedMessages = history.flatMap((msg) => [
-        {
-          id: `user-${msg.timestamp}`,
-          text: msg.user,
-          sender: "user",
-          timestamp: new Date(msg.timestamp),
-        },
-        {
-          id: `bot-${msg.timestamp}`,
-          text: msg.assistant,
-          sender: "bot",
-          timestamp: new Date(msg.timestamp),
-        },
-      ]);
-
-      setMessages(formattedMessages);
-    } catch (error) {
-      console.error("Failed to load chat history:", error);
-    }
-  };
-
+ 
   // Shared TTS helper — used by text replies when toggle is on
   const speakText = async (text) => {
     try {
@@ -96,7 +65,7 @@ export default function Chatbot({ isOpen, onClose }) {
   };
 
   const sendMessage = async (text) => {
-    if (!text.trim() || !sessionId) return;
+    if (!text.trim()) return;
 
     const userMessage = {
       id: `user-${Date.now()}`,
@@ -111,11 +80,10 @@ export default function Chatbot({ isOpen, onClose }) {
     setIsSending(true);
 
     try {
-      const response = await api.post("/api/chatbot/chat", {
+      const response = await api.post("/api/landing/chat", {
         message: text.trim(),
-        session_id: sessionId,
-        language: language,
-        allergies: [],
+        conversation_id: conversationIdRef.current,
+        language: "en",
       });
 
       const botMessage = {
@@ -123,32 +91,27 @@ export default function Chatbot({ isOpen, onClose }) {
         text: response.data.response,
         sender: "bot",
         timestamp: new Date(),
-        intent: response.data.intent,
-        translated: response.data.translated,
+        suggestedRestaurants: response.data.suggested_restaurants || [],
       };
 
       setMessages((prev) => [...prev, botMessage]);
-
       // Speak the reply if voice toggle is on
       if (voiceReplyEnabled) {
         await speakText(response.data.response);
       }
-
-      // Show notification if items were added to cart
-      if (response.data.intent?.items?.length > 0) {
-        const itemNames = response.data.intent.items.map((item) => item.name).join(", ");
-        alert(`✅ Added to cart: ${itemNames}`);
-      }
     } catch (error) {
-      console.error("Chat error:", error);
-      const errorMessage = {
-        id: `bot-error-${Date.now()}`,
-        text: "Sorry, I'm having trouble right now. Please try again!",
-        sender: "bot",
-        timestamp: new Date(),
-        isError: true,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      console.error("Landing chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `bot-error-${Date.now()}`,
+          text: "Sorry, I'm having trouble right now. Please try again!",
+          sender: "bot",
+          timestamp: new Date(),
+          isError: true,
+          suggestedRestaurants: [],
+        },
+      ]);
     } finally {
       setIsTyping(false);
       setIsSending(false);
@@ -172,7 +135,7 @@ export default function Chatbot({ isOpen, onClose }) {
   const startRecording = async () => {
     try {
       console.log("🎤 Starting recording...");
-
+ 
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -180,19 +143,19 @@ export default function Chatbot({ isOpen, onClose }) {
           sampleRate: 44100,
         },
       });
-
+ 
       audioChunksRef.current = [];
-
+ 
       const recorder = new MediaRecorder(stream, {
         mimeType: MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4",
       });
-
+ 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
         }
       };
-
+ 
       recorder.onstop = async () => {
         if (audioChunksRef.current.length > 0) {
           const audioBlob = new Blob(audioChunksRef.current, {
@@ -202,10 +165,10 @@ export default function Chatbot({ isOpen, onClose }) {
         } else {
           alert("No audio was recorded. Please try again.");
         }
-
+ 
         stream.getTracks().forEach((track) => track.stop());
       };
-
+ 
       recorder.start(100);
       setMediaRecorder(recorder);
       setIsRecording(true);
@@ -214,7 +177,7 @@ export default function Chatbot({ isOpen, onClose }) {
       alert("Please allow microphone access to use voice chat");
     }
   };
-
+ 
   const stopRecording = () => {
     if (mediaRecorder && mediaRecorder.state === "recording") {
       mediaRecorder.stop();
@@ -222,80 +185,100 @@ export default function Chatbot({ isOpen, onClose }) {
       setMediaRecorder(null);
     }
   };
-
+ 
   const sendVoiceMessage = async (audioBlob) => {
     setIsSending(true);
-
+ 
     try {
       const reader = new FileReader();
-
+ 
       reader.onloadend = async () => {
-        setIsTyping(true); // ← moved inside onloadend, right before the API call
+        setIsTyping(true);
         const base64Audio = reader.result.split(",")[1];
-
+ 
         try {
-          const response = await api.post("/api/voice/chat", {
-            audio_base64: base64Audio,
-            session_id: sessionId,
-            language: language,
-            allergies: [],
+          // STT: transcribe audio to text
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.webm");
+
+          const sttResponse = await api.post("/api/voice/stt", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+            params: { language },
           });
-
-          if (response.data.success) {
-            const userMessage = {
-              id: `user-voice-${Date.now()}`,
-              text: response.data.user_text,
-              sender: "user",
-              timestamp: new Date(),
-              isVoice: true,
-            };
-
-            const botMessage = {
-              id: `bot-voice-${Date.now()}`,
-              text: response.data.bot_text,
-              sender: "bot",
-              timestamp: new Date(),
-              audioData: response.data.bot_audio,
-            };
-
-            setMessages((prev) => [...prev, userMessage, botMessage]);
-
-            if (response.data.bot_audio) {
-              try {
-                const audio = new Audio(`data:audio/mp3;base64,${response.data.bot_audio}`);
+ 
+          if (!sttResponse.data.success) {
+            throw new Error(sttResponse.data.error || "STT failed");
+          }
+ 
+          const transcribedText = sttResponse.data.text;
+ 
+          const userMessage = {
+            id: `user-voice-${Date.now()}`,
+            text: transcribedText,
+            sender: "user",
+            timestamp: new Date(),
+            isVoice: true,
+          };
+ 
+          setMessages((prev) => [...prev, userMessage]);
+ 
+          // Send transcribed text to landing chat
+          const chatResponse = await api.post("/api/landing/chat", {
+            message: transcribedText,
+            conversation_id: conversationIdRef.current,
+            language: language,
+          });
+ 
+          const botMessage = {
+            id: `bot-voice-${Date.now()}`,
+            text: chatResponse.data.response,
+            sender: "bot",
+            timestamp: new Date(),
+            suggestedRestaurants: chatResponse.data.suggested_restaurants || [],
+          };
+ 
+          setMessages((prev) => [...prev, botMessage]);
+ 
+          // TTS: speak the bot reply
+          if (chatResponse.data.response) {
+            try {
+              const ttsResponse = await api.post("/api/voice/tts", null, {
+                params: { text: chatResponse.data.response, language },
+              });
+              if (ttsResponse.data.success && ttsResponse.data.audio) {
+                const audio = new Audio(`data:audio/mp3;base64,${ttsResponse.data.audio}`);
                 audio.play();
-              } catch (audioError) {
-                console.error("Audio playback error:", audioError);
               }
+            } catch (ttsError) {
+              console.error("TTS error:", ttsError);
             }
-
-            if (response.data.items_added_to_cart?.length > 0) {
-              const itemNames = response.data.items_added_to_cart.join(", ");
-              alert(`✅ Added to cart: ${itemNames}`);
-            }
-          } else {
-            throw new Error(response.data.error || "Voice processing failed");
           }
         } catch (apiError) {
           console.error("❌ API call failed:", apiError);
           alert("Voice message failed. Please try typing instead.");
         } finally {
-          setIsTyping(false); // ← clears after API resolves
+          setIsTyping(false);
           setIsSending(false);
         }
       };
-
+ 
       reader.onerror = () => {
         alert("Failed to process audio. Please try again.");
         setIsSending(false);
       };
-
+ 
       reader.readAsDataURL(audioBlob);
     } catch (error) {
       console.error("❌ Voice message error:", error);
       alert("Voice message failed. Please try typing instead.");
       setIsSending(false);
     }
+  };
+
+  // Matches RestaurantCard navigation and App.jsx route definition
+  const handleRestaurantClick = (restaurant) => {
+    onClose();
+    navigate(`/restaurant/${restaurant.id}/menu`);
   };
 
   if (!isOpen) return null;
@@ -319,16 +302,19 @@ export default function Chatbot({ isOpen, onClose }) {
           0%, 100% { opacity: 1; }
           50%      { opacity: 0.5; }
         }
+        .landing-restaurant-card:hover {
+          background-color: #fff7ed !important;
+          border-color: #f97316 !important;
+          transform: translateY(-1px);
+        }
       `}</style>
-      {/* Backdrop/Overlay */}
+
+      {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: "rgba(0, 0, 0, 0.4)",
           zIndex: 999,
           backdropFilter: "blur(2px)",
@@ -337,6 +323,7 @@ export default function Chatbot({ isOpen, onClose }) {
 
       {/* Chatbot Panel */}
       <div
+        dir="ltr"
         style={{
           position: "fixed",
           bottom: "80px",
@@ -370,14 +357,13 @@ export default function Chatbot({ isOpen, onClose }) {
               Gusto AI Assistant
             </h2>
             <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "11px", margin: "2px 0 0 0" }}>
-              Ask me anything about the menu!
+              Find your perfect restaurant!
             </p>
           </div>
 
-          {/* Language Selector, Voice Toggle & Close Button */}
+          {/* Voice Toggle & Close Button */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <LanguageSelector variant="compact" />
-
+            <LanguageSelector variant="compact"/>
             {/* Voice Reply Toggle */}
             <button
               onClick={() => setVoiceReplyEnabled((prev) => !prev)}
@@ -400,7 +386,7 @@ export default function Chatbot({ isOpen, onClose }) {
                 : <VolumeX size={16} style={{ color: "rgba(255,255,255,0.7)" }} />
               }
             </button>
-
+ 
             <button
               onClick={onClose}
               style={{
@@ -433,41 +419,6 @@ export default function Chatbot({ isOpen, onClose }) {
             gap: "12px",
           }}
         >
-          {/* Allergen/Dietary Banner */}
-          {customer && (profile?.allergens?.length > 0 || profile?.dietary_preferences?.length > 0) && (
-            <div style={{
-              backgroundColor: "#fff7ed",
-              border: "1px solid #fed7aa",
-              borderRadius: "12px",
-              padding: "6px 12px",
-              fontSize: "13px",
-              color: "#381b11",
-              flexShrink: 0,
-              textAlign: "center",
-            }}>
-              <p style={{ margin: 0 }}>
-                Personalizing from your profile -{" "}
-                <span
-                  onClick={() => navigate("/customer/profile")}
-                  style={{ textDecoration: "underline", cursor: "pointer", fontWeight: 700 }}
-                >
-                  Change here
-                </span>
-              </p>
-              {profile?.allergens?.length > 0 && (
-                <p style={{ margin: "0 0 2px", color: "#5a480d" }}>
-                  Allergens: {profile.allergens.join(", ")}
-                </p>
-              )}
-              {profile?.dietary_preferences?.length > 0 && (
-                <p style={{ margin: "0 0 4px", color: "#5a480d" }}>
-                  Dietary preferences: {profile.dietary_preferences.join(", ")}
-                </p>
-              )}
-              
-            </div>
-          )}
-
           {/* Voice reply indicator banner */}
           {voiceReplyEnabled && (
             <div style={{
@@ -480,13 +431,14 @@ export default function Chatbot({ isOpen, onClose }) {
               flexShrink: 0,
               display: "flex",
               alignItems: "center",
-              gap: "6px"
+              gap: "6px",
             }}>
               <Volume2 size={12} />
-              Voice replies are on — I'll read my responses aloud.
+              Voice replies are on. I'll read my responses aloud.
             </div>
           )}
 
+          {/* Welcome message */}
           {messages.length === 0 && (
             <div style={{ textAlign: "center", marginTop: "40px" }}>
               <div
@@ -498,100 +450,145 @@ export default function Chatbot({ isOpen, onClose }) {
                   display: "inline-block",
                 }}
               >
-                <p
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: "8px",
-                  }}
-                >
+                <p style={{ fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
                   👋{" "}
                   {language === "ar"
-                    ? "مرحباً! أنا مساعدك الذكي"
+                    ? "مرحباً! أنا مساعدك لاختيار المطعم"
                     : language === "ur"
-                    ? "ہیلو! میں آپ کا AI اسسٹنٹ ہوں"
+                    ? "ہیلو! میں آپ کا ریستوران گائیڈ ہوں"
                     : language === "hi"
-                    ? "नमस्ते! मैं आपका AI सहायक हूं"
+                    ? "नमस्ते! मैं आपका रेस्तरां सहायक हूं"
                     : language === "es"
-                    ? "¡Hola! Soy tu asistente de AI"
+                    ? "¡Hola! Soy tu guía de restaurantes"
                     : language === "fr"
-                    ? "Bonjour! Je suis votre assistant AI"
-                    : "Hi! I'm your AI assistant"}
+                    ? "Bonjour! Je suis votre guide restaurant"
+                    : "Hi! I'm your dining concierge"}
                 </p>
                 <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
                   {language === "ar"
-                    ? "اسألني عن الأطباق أو المكونات أو الحساسية!"
+                    ? "أخبرني عن ميزانيتك أو موقعك أو نوع المطبخ وسأجد لك المكان المثالي!"
                     : language === "ur"
-                    ? "مجھ سے ڈشز، اجزاء یا الرجی کے بارے میں پوچھیں!"
+                    ? "مجھے اپنا بجٹ، مقام یا کھانے کی قسم بتائیں اور میں بہترین جگہ ڈھونڈوں گا!"
                     : language === "hi"
-                    ? "मुझसे व्यंजन, सामग्री या एलर्जी के बारे में पूछें!"
+                    ? "मुझे अपना बजट, स्थान या व्यंजन बताएं और मैं सही जगह ढूंढूंगा!"
                     : language === "es"
-                    ? "¡Pregúntame sobre platos, ingredientes o alergias!"
+                    ? "¡Dime tu presupuesto, ubicación o cocina y encontraré el lugar perfecto!"
                     : language === "fr"
-                    ? "Demandez-moi des plats, ingrédients ou allergies !"
-                    : "Ask me about dishes, ingredients, or allergies!"}
+                    ? "Dites-moi votre budget, emplacement ou cuisine et je trouverai l'endroit parfait !"
+                    : "Tell me your budget, location, or cuisine and I'll find the perfect spot!"}
                 </p>
               </div>
             </div>
           )}
 
+          {/* Messages */}
           {messages.map((msg) => (
-            <div
-              key={msg.id}
-              style={{
-                display: "flex",
-                justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
-              }}
-            >
+            <div key={msg.id}>
               <div
                 style={{
-                  backgroundColor:
-                    msg.sender === "user" ? "#fef3c7" : msg.isError ? "#fee2e2" : "white",
-                  border:
-                    msg.sender === "user"
+                  display: "flex",
+                  justifyContent: msg.sender === "user" ? "flex-end" : "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: msg.sender === "user" ? "#fef3c7" : msg.isError ? "#fee2e2" : "white",
+                    border: msg.sender === "user"
                       ? "none"
                       : msg.isError
                       ? "1px solid #fca5a5"
                       : "1px solid #e5e7eb",
-                  borderRadius:
-                    msg.sender === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                  padding: "12px 14px",
-                  maxWidth: "85%",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "13px",
-                    color: "#111827",
-                    lineHeight: "1.5",
-                    whiteSpace: "pre-wrap",
-                    direction: language === "ar" || language === "ur" ? "rtl" : "ltr",
+                    borderRadius: msg.sender === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                    padding: "12px 14px",
+                    maxWidth: "85%",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                   }}
                 >
-                  {msg.text}
-                </p>
-
-                <span
-                  style={{
-                    fontSize: "10px",
-                    color: "#9ca3af",
-                    display: "block",
-                    textAlign: msg.sender === "user" ? "right" : "left",
-                    marginTop: "6px",
-                  }}
-                >
-                  {msg.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      color: "#111827",
+                      lineHeight: "1.5",
+                      whiteSpace: "pre-wrap",
+                      direction: language === "ar" || language === "ur" ? "rtl" : "ltr",
+                    }}
+                  >
+                    {msg.text}
+                  </p>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "#9ca3af",
+                      display: "block",
+                      textAlign: msg.sender === "user" ? "right" : "left",
+                      marginTop: "6px",
+                    }}
+                  >
+                    {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
               </div>
+
+              {/* Suggested Restaurant Cards */}
+              {msg.suggestedRestaurants?.length > 0 && (
+                <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  {msg.suggestedRestaurants.map((r) => (
+                    <div
+                      key={r.id}
+                      className="landing-restaurant-card"
+                      onClick={() => handleRestaurantClick(r)}
+                      style={{
+                        backgroundColor: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "12px",
+                        padding: "12px",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: "600", fontSize: "13px", color: "#111827" }}>
+                            {r.name}
+                          </p>
+                          <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#6b7280" }}>
+                            {r.category}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Star size={11} style={{ color: "#f97316" }} />
+                          <span style={{ fontSize: "12px", fontWeight: "600", color: "#374151" }}>
+                            {r.rating}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "12px", marginTop: "6px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                          <MapPin size={11} style={{ color: "#9ca3af" }} />
+                          <span style={{ fontSize: "11px", color: "#6b7280" }}>{r.location}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+                          <DollarSign size={11} style={{ color: "#9ca3af" }} />
+                          <span style={{ fontSize: "11px", color: "#6b7280" }}>{r.avg_price_range}</span>
+                        </div>
+                      </div>
+
+                      {r.reason && (
+                        <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#f97316", fontStyle: "italic" }}>
+                          {r.reason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 
+          {/* Typing indicator */}
           {isTyping && (
             <div style={{ display: "flex", justifyContent: "flex-start" }}>
               <div
@@ -604,33 +601,17 @@ export default function Chatbot({ isOpen, onClose }) {
                   gap: "4px",
                 }}
               >
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    backgroundColor: "#9ca3af",
-                    borderRadius: "50%",
-                    animation: "bounce 1.4s infinite ease-in-out",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    backgroundColor: "#9ca3af",
-                    borderRadius: "50%",
-                    animation: "bounce 1.4s infinite ease-in-out 0.2s",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    backgroundColor: "#9ca3af",
-                    borderRadius: "50%",
-                    animation: "bounce 1.4s infinite ease-in-out 0.4s",
-                  }}
-                ></span>
+                {[0, 0.2, 0.4].map((delay, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: "8px", height: "8px",
+                      backgroundColor: "#9ca3af",
+                      borderRadius: "50%",
+                      animation: `bounce 1.4s infinite ease-in-out ${delay}s`,
+                    }}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -687,7 +668,6 @@ export default function Chatbot({ isOpen, onClose }) {
                 direction: language === "ar" || language === "ur" ? "rtl" : "ltr",
               }}
             />
-
             <button
               onClick={isRecording ? stopRecording : startRecording}
               disabled={isSending}
@@ -719,24 +699,16 @@ export default function Chatbot({ isOpen, onClose }) {
               style={{
                 background: "none",
                 border: "none",
-                cursor: inputText.trim() && !isSending ? "pointer" : "not-allowed",
+                cursor: inputText.trim() && !isSending && !isRecording ? "pointer" : "not-allowed",
                 padding: 0,
                 display: "flex",
                 alignItems: "center",
               }}
             >
               {isSending ? (
-                <Loader2
-                  size={20}
-                  style={{ color: "#f97316", animation: "spin 1s linear infinite" }}
-                />
+                <Loader2 size={20} style={{ color: "#f97316", animation: "spin 1s linear infinite" }} />
               ) : (
-                <Send
-                  size={20}
-                  style={{
-                    color: inputText.trim() && !isSending ? "#f97316" : "#d1d5db",
-                  }}
-                />
+                <Send size={20} style={{ color: inputText.trim() && !isSending && !isRecording ? "#f97316" : "#d1d5db" }} />
               )}
             </button>
           </div>

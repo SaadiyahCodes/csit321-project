@@ -7,13 +7,22 @@ const CustomerAuthContext = createContext(null);
 export const CustomerAuthProvider = ({ children }) => {
     const [customer, setCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [profile, setProfile] = useState(null);
 
     const fetchCustomer = async () => {
         try {
             const res = await api.get("/api/customer/auth/me");
             setCustomer(res.data);
+            //fetch profile for allergens/dietary prefs
+            try {
+                const profileRes = await api.get("/api/customer/profile/");
+                setProfile(profileRes.data);
+            } catch {
+                setProfile(null);
+            }
         } catch {
             setCustomer(null);
+            setProfile(null);
             localStorage.removeItem("token");
         } finally {
             setLoading(false);
@@ -65,10 +74,11 @@ export const CustomerAuthProvider = ({ children }) => {
             }
         });
         setCustomer(null);
+        setProfile(null);
     };
 
     return (
-        <CustomerAuthContext.Provider value={{ customer, login, register, logout, loading }}>
+        <CustomerAuthContext.Provider value={{ customer, profile, login, register, logout, loading, fetchCustomer }}>
             {children}
         </CustomerAuthContext.Provider>
     );

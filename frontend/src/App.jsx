@@ -16,6 +16,7 @@ import CustomerLogin from './routes/customer/CustomerLogin';
 import CustomerProfile from './routes/customer/CustomerProfile';
 import { SessionProvider } from './context/SessionContext';
 import ARViewer from './ar/ARViewer';
+import { AuthProvider } from './context/AuthContext';
 
 function App() {
   return (
@@ -41,23 +42,25 @@ function App() {
         } />
 
         {/*Admin Portal */}
-        <Route path="/login" element={<Login/>} />
-        <Route
-          path="/admin"
-          element={
+        <Route path="/login" element={
+          <AuthProvider>
+            <Login />
+          </AuthProvider>
+        } />
+        <Route path="/admin" element={
+          <AuthProvider>
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/analytics"
-          element={
+          </AuthProvider>
+        } />
+        <Route path="/admin/analytics" element={
+          <AuthProvider>
             <AdminRoute>
               <AdminAnalytics />
             </AdminRoute>
-          }
-        />
+          </AuthProvider>
+        } />
 
         {/* Customer Login */}
         <Route path="/customer/login" element={

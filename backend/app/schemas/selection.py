@@ -63,6 +63,7 @@ class SelectionFinalizeResponse(BaseModel):
     total_price: float
     item_count: int
     finalized_at: datetime
+    items: list[SelectionItemResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True

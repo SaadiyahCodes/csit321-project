@@ -17,7 +17,8 @@ class ChatHandler:
         session_id: str,
         language: str,
         db: Session,
-        user_allergies: Optional[List[str]] = None
+        user_allergies: Optional[List[str]] = None,
+        dietary_prefs: Optional[List[str]] = None
     ) -> Dict:
         """
         Complete chat processing with translation and auto-cart
@@ -69,7 +70,8 @@ class ChatHandler:
             session_id=session_id,
             db=db,
             restaurant_id=session.restaurant_id,
-            user_allergies=user_allergies
+            user_allergies=user_allergies,
+            dietary_prefs=dietary_prefs
         )
         
         if result.get("error"):
@@ -107,29 +109,30 @@ class ChatHandler:
                 selection = selection_crud.get_or_create_selection(db, session_id)
                 
                 for item in result["intent"]["items"]:
+                    quantity = item.get("quantity", 1)
+                    notes = item.get("notes", "") or "Added by chatbot"
+
                     selection_crud.add_item_to_selection(
                         db=db,
                         selection=selection,
                         menu_item_id=item["id"],
-                        quantity=1,
-                        notes="Added by chatbot"
+                        quantity=quantity,
+                        notes=notes
                     )
-                    items_added.append(item['name'])
+                    items_added.append(f"{quantity}x {item['name']}")
 
-                    # Track chatbot-originated orders separately for analytics
                     chatbot_order = ChatbotOrder(
                         session_id=session_id,
                         menu_item_id=item["id"],
-                        quantity=1,
-                        notes="Added by chatbot"
+                        quantity=quantity,
+                        notes=notes
                     )
                     db.add(chatbot_order)
                 db.commit()
-                print(f"✅ Auto-added {len(items_added)} items to cart")
+                print(f"✅ Auto-added {len(items_added)} items to cart: {items_added}")
                 
             except Exception as e:
                 print(f"⚠️ Failed to auto-add to cart: {e}")
-                # Don't fail the whole request, just log it
         
         # ===== 6. RETURN COMPLETE RESULT & SAVE TO DB =====
 

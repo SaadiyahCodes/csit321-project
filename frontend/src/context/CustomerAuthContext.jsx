@@ -20,18 +20,33 @@ export const CustomerAuthProvider = ({ children }) => {
             } catch {
                 setProfile(null);
             }
-        } catch {
+        } catch (err) {
             setCustomer(null);
             setProfile(null);
-            localStorage.removeItem("token");
+            if (err.response?.status !== 401) {
+                localStorage.removeItem("token");
+            }
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (localStorage.getItem("token")) {
-            fetchCustomer();
+        const token = localStorage.getItem("token");
+        if (token) {
+            // Decode JWT to check type without a library
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.type === 'customer') {
+                    fetchCustomer();
+                } else {
+                    // Admin token — skip customer auth entirely
+                    setLoading(false);
+                }
+            } catch {
+                // Malformed token
+                setLoading(false);
+            }
         } else {
             setLoading(false);
         }

@@ -27,6 +27,8 @@ def get_or_create_session(db: Session, data: SessionCreate):
     if existing:
         if data.customer_id and not existing.customer_id:
             existing.customer_id = data.customer_id
+        if data.language and data.language != existing.language:
+            existing.language = data.language
             db.commit()
             db.refresh(existing)
         return existing

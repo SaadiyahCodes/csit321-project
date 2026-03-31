@@ -18,11 +18,13 @@ def get_dashboard(
     days = 7 if date_range == "7days" else 30
     
     try:
+        kpi = analytics.get_kpi_metrics(restaurant_id, days)
         return {
-            "kpi": analytics.get_kpi_metrics(restaurant_id, days),
+            "kpi": kpi,
             "top_questions": analytics.get_top_questions(restaurant_id, days),
             "conversation_timeline": analytics.get_conversation_timeline(restaurant_id, days),
             "language_distribution": analytics.get_language_distribution(restaurant_id, days),
+            "top_menu_items": analytics.get_top_menu_items(restaurant_id, days, limit=5),
             "alerts": analytics.generate_alerts(restaurant_id, days),
             "date_range": date_range
         }

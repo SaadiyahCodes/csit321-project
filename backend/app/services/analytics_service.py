@@ -49,7 +49,7 @@ class AnalyticsService:
         #logs
         print(f"🔍 Sessions: {total_sessions}, Orders: {total_orders}, Convs: {total_convs}")
 
-        conversion = (total_orders / total_sessions * 100) if total_sessions > 0 else 0
+        conversion = (total_orders / total_convs * 100) if total_convs > 0 else 0
         
         # 4. Average order value
         subquery = self.db.query(
@@ -116,12 +116,17 @@ class AnalyticsService:
             "Is this vegetarian?": 0,
             "What's the portion size?": 0,
             "Is this gluten-free?": 0,
+            "Does this have shellfish?": 0,
+            "Does this have soy?": 0,
+            "Does this have eggs?": 0,
+            "Does this have fish?": 0,
+            "Does this have sesame?": 0,
+            "Does this have mustard?": 0,
         }
-        
+
         for content, extracted_allergens in messages:
             lower = content.lower()
-            
-            # Use AI-extracted allergens for dairy/nuts/gluten — avoids false positives
+
             allergens = extracted_allergens or []
             if any(a in allergens for a in ["dairy", "milk", "lactose"]):
                 categories["Does this have dairy?"] += 1
@@ -129,14 +134,36 @@ class AnalyticsService:
                 categories["Does this have nuts?"] += 1
             if any(a in allergens for a in ["gluten", "wheat"]):
                 categories["Is this gluten-free?"] += 1
-                        
-            # Keep keyword matching for non-allergen questions where false positives are unlikely
-            if "spicy" in lower or "spice" in lower:
+            if any(a in allergens for a in ["shellfish"]):
+                categories["Does this have shellfish?"] += 1
+            if any(a in allergens for a in ["soy"]):
+                categories["Does this have soy?"] += 1
+            if any(a in allergens for a in ["eggs"]):
+                categories["Does this have eggs?"] += 1
+            if any(a in allergens for a in ["fish"]):
+                categories["Does this have fish?"] += 1
+            if any(a in allergens for a in ["sesame"]):
+                categories["Does this have sesame?"] += 1
+            if any(a in allergens for a in ["mustard"]):
+                categories["Does this have mustard?"] += 1
+
+            if "spicy" in lower or "spice" in lower or "hot" in lower:
                 categories["Is this spicy?"] += 1
             if "vegetarian" in lower or "vegan" in lower:
                 categories["Is this vegetarian?"] += 1
-            if "size" in lower or "portion" in lower:
+            if "size" in lower or "portion" in lower or "how big" in lower:
                 categories["What's the portion size?"] += 1
+            # Keyword fallbacks for allergens not caught by extracted_allergens
+            if "shellfish" in lower or "shrimp" in lower or "prawn" in lower or "crab" in lower:
+                categories["Does this have shellfish?"] += 1
+            if "soy" in lower or "soya" in lower:
+                categories["Does this have soy?"] += 1
+            if "egg" in lower:
+                categories["Does this have eggs?"] += 1
+            if "sesame" in lower or "tahini" in lower:
+                categories["Does this have sesame?"] += 1
+            if "mustard" in lower:
+                categories["Does this have mustard?"] += 1
             
         sorted_q = sorted(categories.items(), key=lambda x: x[1], reverse=True)
         return [{"question": q, "count": c} for q, c in sorted_q if c > 0]
@@ -197,6 +224,7 @@ class AnalyticsService:
             'ar': 'Arabic',
             'hi': 'Hindi',
             'ur': 'Urdu',
+            'es': 'Spanish',
             'fr': 'French'
         }
         
@@ -205,26 +233,106 @@ class AnalyticsService:
             for lang, count in lang_counts
         ]
     
-    def generate_alerts(self, restaurant_id: int, days: int = 7):
+    def get_top_menu_items(self, restaurant_id: int, days: int = 7, limit: int = 5):
+        """
+        Top ordered menu items with chatbot vs total order breakdown.
+        Returns top `limit` items by total quantity ordered across all finalized selections.
+        Each item includes total_orders (all channels) and chatbot_orders (via ChatbotOrder).
+        """
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+ 
+        # All finalized order quantities per menu item
+        total_rows = self.db.query(
+            MenuItem.id,
+            MenuItem.name,
+            MenuItem.category,
+            MenuItem.price,
+            func.sum(SelectionItem.quantity).label("total_qty")
+        ).join(
+            SelectionItem, SelectionItem.menu_item_id == MenuItem.id
+        ).join(
+            Selection, Selection.id == SelectionItem.selection_id
+        ).filter(
+            Selection.restaurant_id == restaurant_id,
+            Selection.status == "finalized",
+            Selection.created_at >= start_date
+        ).group_by(
+            MenuItem.id, MenuItem.name, MenuItem.category, MenuItem.price
+        ).order_by(
+            func.sum(SelectionItem.quantity).desc()
+        ).limit(limit).all()
+ 
+        if not total_rows:
+            return []
+ 
+        # Chatbot order quantities for those same items
+        top_item_ids = [row.id for row in total_rows]
+ 
+        chatbot_rows = self.db.query(
+            ChatbotOrder.menu_item_id,
+            func.sum(ChatbotOrder.quantity).label("chatbot_qty")
+        ).join(
+            CustomerSession, CustomerSession.session_id == ChatbotOrder.session_id
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            ChatbotOrder.menu_item_id.in_(top_item_ids),
+            ChatbotOrder.confirmed_at >= start_date
+        ).group_by(ChatbotOrder.menu_item_id).all()
+ 
+        chatbot_map = {row.menu_item_id: int(row.chatbot_qty) for row in chatbot_rows}
+ 
+        result = []
+        for row in total_rows:
+            total = int(row.total_qty)
+            chatbot = chatbot_map.get(row.id, 0)
+            result.append({
+                "id": row.id,
+                "name": row.name,
+                "category": row.category,
+                "price": round(float(row.price), 2),
+                "total_orders": total,
+                "chatbot_orders": chatbot,
+                "chatbot_percent": min(round((chatbot / total * 100), 1), 100) if total > 0 else 0,
+            })
+ 
+        return result
+    
+    def generate_alerts(self, restaurant_id: int, days: int = 7, kpi: dict = None):
         """Generate actionable alerts"""
         
         alerts = []
         questions = self.get_top_questions(restaurant_id, days)
-        kpi = self.get_kpi_metrics(restaurant_id, days)
+        if kpi is None:
+            kpi = self.get_kpi_metrics(restaurant_id, days)
         total_convs = kpi['total_conversations']
         
-        # ALERT 1: High allergen questions
+        # ALERT 1: High allergen questions — covers all tracked allergens
+        ALLERGEN_LABELS = {
+            "dairy": "Dairy", "milk": "Dairy", "lactose": "Dairy",
+            "nuts": "Nuts", "peanut": "Nuts", "peanuts": "Nuts", "tree nuts": "Nuts",
+            "gluten": "Gluten", "wheat": "Gluten",
+            "shellfish": "Shellfish", "soy": "Soy", "eggs": "Eggs",
+            "fish": "Fish", "sesame": "Sesame", "mustard": "Mustard",
+        }
+
+        allergen_counts = {}
+        for q in questions:
+            lower_q = q['question'].lower()
+            for keyword, label in ALLERGEN_LABELS.items():
+                if keyword in lower_q:
+                    allergen_counts[label] = allergen_counts.get(label, 0) + q['count']
+
         if total_convs > 0:
-            for q in questions:
-                if "dairy" in q['question'].lower() or "nuts" in q['question'].lower():
-                    percent = (q['count'] / total_convs * 100)
-                    if percent > 20:
-                        alerts.append({
-                            "severity": "yellow",
-                            "title": "High Allergen Inquiries",
-                            "message": f"{percent:.0f}% of customers ask about allergens",
-                            "action": "Add allergen badges to menu items"
-                        })
+            for label, count in sorted(allergen_counts.items(), key=lambda x: x[1], reverse=True):
+                percent = (count / total_convs * 100)
+                if percent > 15:
+                    alerts.append({
+                        "severity": "yellow",
+                        "title": f"High {label} Allergen Inquiries",
+                        "message": f"{percent:.0f}% of customers ask about {label.lower()}",
+                        "action": f"Add {label.lower()} allergen badges to relevant menu items"
+                    })
+                    if len(alerts) >= 3:
                         break
         
         # ALERT 2: Low conversion

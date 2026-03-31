@@ -3,12 +3,14 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useParams } from "react-router-dom";
 import api from "../api";
 import { useCustomerAuth } from "./CustomerAuthContext";
+import { useLanguage } from "./LanguageContext";
 
 export const SessionContext = createContext(null);
 
 export function SessionProvider({ children }) {
   const { restaurantId } = useParams();
   const {customer} = useCustomerAuth();
+  const {language} = useLanguage();
   const [sessionId, setSessionId] = useState(null);
   const [selectionId, setSelectionId] = useState(null);
   const [cartCount, setCartCount] = useState(0);
@@ -16,7 +18,7 @@ export function SessionProvider({ children }) {
 
   useEffect(() => {
     initializeSession();
-  }, [restaurantId, customer?.id]);
+  }, [restaurantId, customer?.id, language]);
 
   //Call this any time cart changes (add, remove, update)
   const fetchCartCount = useCallback(async (sid = selectionId, ssid = sessionId) => {
@@ -65,7 +67,7 @@ export function SessionProvider({ children }) {
         session_id: storedSessionId,
         restaurant_id: parseInt(restaurantId),
         customer_id: customer?.id || null,
-        language: "en"
+        language: language
       });
 
       const newSessionId = sessionResponse.data.session_id;

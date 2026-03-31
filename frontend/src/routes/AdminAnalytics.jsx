@@ -516,10 +516,10 @@ export default function AdminAnalytics() {
   }, [user?.restaurant_id]);
   const [editingBaseline, setEditingBaseline] = useState(false);
   const [baselineInput, setBaselineInput] = useState('');
-  const [llmSummary, setLlmSummary] = useState(null);
-  const [llmLoading, setLlmLoading] = useState(false);
   const [cache, setCache] = useState({});
-  const [showLlmSummary, setShowLlmSummary] = useState(false);
+  const [orbOpen, setOrbOpen] = useState(false);
+  const [orbInsight, setOrbInsight] = useState(null);
+  const [orbLoading, setOrbLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user?.restaurant_id) {
@@ -530,10 +530,10 @@ export default function AdminAnalytics() {
     }
   }, [dateRange, authLoading, user?.restaurant_id]);
 
-  // Clear AI summary when dateRange changes
+  // Clear insight when dateRange changes
   useEffect(() => {
-      setLlmSummary(null);
-      setShowLlmSummary(false);
+      setOrbInsight(null);
+      setOrbOpen(false);
   }, [dateRange]);
 
   const fetchAnalytics = async () => {
@@ -555,33 +555,27 @@ export default function AdminAnalytics() {
       }
   };
 
-  const fetchLLMSummary = async () => {
-    setLlmLoading(true);
-    try {
-      const payload = {
-        kpi: data.kpi,
-        alerts: data.alerts,
-        top_questions: data.top_questions,
-        top_menu_items: data.top_menu_items,
-        language_distribution: data.language_distribution,
-        date_range: dateRange,
-      };
-
-      const response = await api.post('/api/analytics/ai-summary', payload);
-      console.log('Full response:', response);
-      console.log('Response data:', response.data);
-      console.log('Summary key:', response.data?.summary);
-      if (response.data.summary) {
-        setLlmSummary(response.data.summary);
-      } else {
-        throw new Error('No summary returned');
+  const fetchOrbInsight = async () => {
+      setOrbLoading(true);
+      try {
+          const payload = {
+              kpi: data.kpi,
+              alerts: data.alerts,
+              top_questions: data.top_questions,
+              top_menu_items: data.top_menu_items,
+              language_distribution: data.language_distribution,
+              date_range: dateRange,
+          };
+          const response = await api.post('/api/analytics/ai-summary', payload);
+          if (response.data.summary) {
+              setOrbInsight(response.data.summary);
+          }
+      } catch (err) {
+          console.error('Orb insight failed:', err);
+          setOrbInsight("Unable to generate insight right now. Try again in a moment.");
+      } finally {
+          setOrbLoading(false);
       }
-    } catch (err) {
-      console.error('LLM summary failed:', err);
-      setLlmSummary(null);
-    } finally {
-      setLlmLoading(false);
-    }
   };
 
   const pageStyle = {
@@ -660,76 +654,7 @@ export default function AdminAnalytics() {
       <div style={{ flex: 1, overflow: 'auto', padding: '28px 32px 48px' }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* AI Summary Card */}
-          {summary && summary.length > 0 && (
-            <div style={{
-              background: 'linear-gradient(135deg, #FFF7ED 0%, #FFFBEB 100%)',
-              border: '1px solid #FED7AA',
-              borderRadius: 14,
-              padding: '20px 24px',
-              boxShadow: '0 1px 8px rgba(249,115,22,0.06)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'linear-gradient(135deg, #F97316, #EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 14 }}>✦</span>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#92400E', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    Analytics Summary
-                  </span>
-
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                    {llmSummary && (
-                        <button
-                            onClick={() => setShowLlmSummary(p => !p)}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid #FED7AA',
-                                borderRadius: 8, padding: '6px 14px',
-                                fontSize: 12, fontWeight: 600,
-                                color: '#EA580C', cursor: 'pointer'
-                            }}
-                        >
-                            {showLlmSummary ? 'Show Original' : 'Show AI'}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => { setShowLlmSummary(true); setLlmSummary(null); fetchLLMSummary(); }}
-                        disabled={llmLoading}
-                        style={{
-                                background: 'transparent',
-                                border: '1px solid #FED7AA',
-                                borderRadius: 8, padding: '6px 14px',
-                                fontSize: 12, fontWeight: 600,
-                                color: '#EA580C', cursor: 'pointer'
-                            }}
-                    >
-                        {llmLoading ? <>⟳ Thinking...</> : <>✦ {llmSummary ? 'Regenerate' : 'Generate AI Summary'}</>}
-                    </button>
-                </div>
-              </div>
-
-              {/* Content: LLM or rule-based */}
-              {showLlmSummary && llmSummary ? (
-                  <div>
-                      {llmSummary.replace(/[#*_`]/g, '').split('||BREAK||').map((para, i) => (
-                          <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0', fontSize: 13, color: '#78350F', lineHeight: 1.7 }}>
-                              {para.trim()}
-                          </p>
-                      ))}
-                  </div>
-              ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {summary.map((line, i) => (
-                          <p key={i} style={{ margin: 0, fontSize: 14, color: '#78350F', lineHeight: 1.6, fontWeight: i === 0 ? 600 : 400 }}>
-                              {line}
-                          </p>
-                      ))}
-                  </div>
-              )}
-            </div>
-          )}
+          
 
           {/* Alerts */}
           {data?.alerts && data.alerts.length > 0 && (
@@ -821,6 +746,148 @@ export default function AdminAnalytics() {
 
         </div>
       </div>
+      {/* Floating Orb */}
+      {data && (
+          <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              
+              {/* Insight Card */}
+              {orbOpen && (
+                  <div style={{
+                      position: 'absolute',
+                      bottom: 108,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 340,
+                      background: 'white',
+                      border: '1px solid #FED7AA',
+                      borderRadius: 16,
+                      padding: '20px',
+                      boxShadow: '0 8px 40px rgba(249,115,22,0.15)',
+                      animation: 'fadeUp 0.25s ease',
+                  }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg, #F97316, #EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <span style={{ fontSize: 11, color: 'white' }}>✦</span>
+                              </div>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Insight</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                              {orbInsight && !orbLoading && (
+                                  <button onClick={fetchOrbInsight} style={{ background: 'none', border: 'none', fontSize: 11, color: '#9CA3AF', cursor: 'pointer', fontWeight: 600 }}>↺ Regenerate</button>
+                              )}
+                              <button onClick={() => setOrbOpen(false)} style={{ background: 'none', border: 'none', fontSize: 18, color: '#9CA3AF', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                          </div>
+                      </div>
+
+                      {orbLoading ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 0' }}>
+                              <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid #FED7AA', borderTopColor: '#F97316', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                              <span style={{ fontSize: 13, color: '#9CA3AF' }}>Finding a non-obvious insight...</span>
+                          </div>
+                      ) : orbInsight ? (
+                          <div>
+                              {orbInsight.replace(/[#*_`]/g, '').split('||BREAK||').map((para, i) => (
+                                  <div key={i}>
+                                      {i === 1 && <div style={{ borderTop: '1px solid #FEF3C7', margin: '12px 0' }} />}
+                                      <p style={{ margin: 0, fontSize: 13, color: i === 0 ? '#78350F' : '#92400E', lineHeight: 1.7, fontWeight: i === 1 ? 600 : 400 }}>
+                                          {para.trim()}
+                                      </p>
+                                  </div>
+                              ))}
+                          </div>
+                      ) : null}
+                  </div>
+              )}
+
+              <style>{`
+                  @keyframes orbRotate {
+                      0% {
+                          transform: rotate(90deg);
+                          box-shadow:
+                              0 4px 8px 0 rgba(255,255,255,0.6) inset,
+                              0 10px 16px 0 rgba(251,191,36,0.7) inset,
+                              0 24px 32px 0 rgba(234, 76, 13, 0.6) inset;
+                      }
+                      50% {
+                          transform: rotate(270deg);
+                          box-shadow:
+                              0 4px 8px 0 rgba(255,255,255,0.6) inset,
+                              0 10px 10px 0 rgba(253,186,116,0.8) inset,
+                              0 20px 32px 0 rgba(234, 76, 13, 0.6) inset;
+                      }
+                      100% {
+                          transform: rotate(450deg);
+                          box-shadow:
+                              0 4px 8px 0 rgba(255,255,255,0.6) inset,
+                              0 10px 16px 0 rgba(251,191,36,0.7) inset,
+                              0 24px 32px 0 rgba(234, 76, 13, 0.6) inset;
+                      }
+                  }
+                  @keyframes letterFloat {
+                      0%, 100% { opacity: 0.5; transform: translateY(0); }
+                      20% { opacity: 1; transform: scale(1.15); }
+                      40% { opacity: 0.7; transform: translateY(0); }
+                  }
+                  @keyframes fadeUp {
+                      from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+                      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                  }
+              `}</style>
+
+              {/* The Orb */}
+              <button
+                  onClick={() => {
+                      setOrbOpen(p => !p);
+                      if (!orbInsight && !orbOpen) fetchOrbInsight();
+                  }}
+                  style={{
+                      position: 'relative',
+                      width: 72, height: 72,
+                      borderRadius: '50%',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'transparent',
+                      padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      filter: 'drop-shadow(0 4px 16px rgba(249,115,22,0.35)) drop-shadow(0 2px 6px rgba(249,115,22,0.2))',
+                  }}
+              >
+                  {/* Rotating inset shadow orb */}
+                  <div style={{
+                      position: 'absolute', inset: 0,
+                      borderRadius: '50%',
+                      backgroundColor: '#F97316',
+                      animation: 'orbRotate 2.5s linear infinite',
+                      border: '0.5px solid rgba(222, 156, 76, 0.94)',
+                  }} />
+
+                  {/* Letters on top */}
+                  <div style={{
+                      position: 'relative', zIndex: 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                      {'Gusto'.split('').map((letter, i) => (
+                          <span
+                              key={i}
+                              style={{
+                                  display: 'inline-block',
+                                  color: 'white',
+                                  fontSize: 14,
+                                  fontWeight: 400,
+                                  opacity: 0.85,
+                                  animation: `letterFloat 2.5s infinite`,
+                                  animationDelay: `${i * 0.12}s`,
+                                  fontFamily: "'Inter', sans-serif",
+                              }}
+                          >
+                              {letter}
+                          </span>
+                      ))}
+                  </div>
+              </button>
+          </div>
+      )}
     </div>
   );
 }

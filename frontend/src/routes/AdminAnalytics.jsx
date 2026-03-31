@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
+import api from '../api';
 
 
 // ── Rule-based AI summary ─────────────────────────────────────────────────────
@@ -556,42 +557,18 @@ export default function AdminAnalytics() {
         date_range: dateRange,
       };
 
-      const prompt = `You are an analytics assistant for Gusto, a restaurant AI platform.
-Analyze this data and respond in exactly this format with no extra text:
-
-**1. OVERVIEW**
-2-3 sentences max. Cover: conversations, conversion rate, AOV vs baseline, top language.
-
-**2. MENU OPTIMIZATION**
-* **Recommendation title:** One sentence why, based on the data.
-* **Recommendation title:** One sentence why, based on the data.
-
-Max 2 recommendations. Be specific and data-driven. No generic advice.
-
-DATA: ${JSON.stringify(payload)}`;
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://gusto-ae.vercel.app',
-          'X-Title': 'Gusto Analytics',
-        },
-        body: JSON.stringify({
-          model: 'openrouter/free',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 500,
-        }),
-      });
-
-      const result = await response.json();
-      const text = result.choices?.[0]?.message?.content;
-      if (text) setLlmSummary(text);
-      else throw new Error('No response');
+      const response = await api.post('/api/analytics/ai-summary', payload);
+      console.log('Full response:', response);
+      console.log('Response data:', response.data);
+      console.log('Summary key:', response.data?.summary);
+      if (response.data.summary) {
+        setLlmSummary(response.data.summary);
+      } else {
+        throw new Error('No summary returned');
+      }
     } catch (err) {
       console.error('LLM summary failed:', err);
-      setLlmSummary(null); // falls back to rule-based
+      setLlmSummary(null);
     } finally {
       setLlmLoading(false);
     }
@@ -690,11 +667,7 @@ DATA: ${JSON.stringify(payload)}`;
                   <span style={{ fontSize: 13, fontWeight: 700, color: '#92400E', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                     Analytics Summary
                   </span>
-                  {llmSummary && (
-                    <span style={{ fontSize: 11, color: '#D97706', background: '#FEF3C7', padding: '2px 8px', borderRadius: 99, fontWeight: 600 }}>
-                      Llama 3.3 · OpenRouter
-                    </span>
-                  )}
+
                 </div>
                 <button
                   onClick={() => { setLlmSummary(null); fetchLLMSummary(); }}
@@ -719,51 +692,13 @@ DATA: ${JSON.stringify(payload)}`;
 
               {/* Content: LLM or rule-based */}
               {llmSummary ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {llmSummary.split(/\*\*\d+\.\s+/).filter(Boolean).filter(s => !s.startsWith('#')).map((section, i) => {
-                    const lines = section.split('\n').filter(l => l.trim());
-                    const title = lines[0].replace(/\*+/g, '').replace(':', '').replace(/#/g, '').trim();
-                    const body = lines.slice(1);
-                    return (
-                      <div key={i}>
-                        <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          {title}
-                        </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {body.map((line, j) => {
-                            const clean = line.replace(/^\*+\s*/, '').replace(/\*\*([^*]+)\*\*/g, '$1').trim();
-                            if (!clean) return null;
-                            const isBullet = line.trim().startsWith('*') || line.trim().startsWith('-');
-                            return (
-                              <p key={j} style={{
-                                margin: 0,
-                                fontSize: 13,
-                                color: '#78350F',
-                                lineHeight: 1.65,
-                                paddingLeft: isBullet ? 12 : 0,
-                                borderLeft: isBullet ? '2px solid #FED7AA' : 'none',
-                                fontWeight: 400,
-                              }}>
-                                {isBullet ? (
-                                  (() => {
-                                    const colonIdx = clean.indexOf(':');
-                                    if (colonIdx === -1) return clean;
-                                    return (
-                                      <>
-                                        <strong>{clean.slice(0, colonIdx)}</strong>
-                                        {clean.slice(colonIdx)}
-                                      </>
-                                    );
-                                  })()
-                                ) : clean}
-                              </p>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                  <div>
+                      {llmSummary.replace(/[#*_`]/g, '').split('||BREAK||').map((para, i) => (
+                          <p key={i} style={{ margin: i === 0 ? 0 : '10px 0 0', fontSize: 13, color: '#78350F', lineHeight: 1.7 }}>
+                              {para.trim()}
+                          </p>
+                      ))}
+                  </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {summary.map((line, i) => (

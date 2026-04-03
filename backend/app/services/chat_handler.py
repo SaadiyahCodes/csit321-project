@@ -133,6 +133,51 @@ class ChatHandler:
                 
             except Exception as e:
                 print(f"⚠️ Failed to auto-add to cart: {e}")
+
+        # ===== 5.5. HANDLE HANDS-FREE INTENTS (NEW!) =====
+        
+        # Handle read menu intent
+        if result["intent"].get("type") == "read_menu":
+            # Frontend will detect this and call /handsfree/menu
+            pass
+        
+        # Handle read cart intent
+        if result["intent"].get("type") == "read_cart":
+            # Frontend will detect this and call /handsfree/cart
+            pass
+        
+        # Handle checkout intent
+        if result["intent"].get("should_finalize"):
+            try:
+                from app.models.selection import SelectionStatus
+                from datetime import datetime
+                
+                selection = selection_crud.get_selection_by_session(db, session_id)
+                if selection and selection.items:
+                    selection.status = SelectionStatus.FINALIZED
+                    selection.finalized_at = datetime.utcnow()
+                    db.commit()
+                    
+                    total = sum(
+                        item.menu_item.price * item.quantity 
+                        for item in selection.items
+                    )
+                    
+                    # Override response with checkout confirmation
+                    response_text = f"Order placed! Your order number is {selection.id}. Total: ${total:.2f}. A waiter will bring it to you shortly."
+                    
+                    # Translate if needed
+                    if language != "en":
+                        translation_result = translation_service.translate_text(
+                            response_text,
+                            language,
+                            use_gemini=True
+                        )
+                        if translation_result.get("success"):
+                            response_text = translation_result["translated_text"]
+                
+            except Exception as e:
+                print(f"⚠️ Checkout failed: {e}")
         
         # ===== 6. RETURN COMPLETE RESULT & SAVE TO DB =====
 

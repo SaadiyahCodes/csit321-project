@@ -354,6 +354,26 @@ Customer: "can I get a chicken sandwich with no pickles"
 
             ai_message = parsed.get("response", raw_text)
 
+            # ===== 6.5 DETECT HANDS-FREE COMMANDS =====
+            message_lower = message.lower()
+            
+            # Check for special hands-free intents
+            if any(word in message_lower for word in ['menu', 'show menu', 'read menu', 'what do you have']):
+                parsed["intent"] = "read_menu"
+                parsed["should_add"] = False
+                parsed["items_to_add"] = []
+            
+            elif any(word in message_lower for word in ['cart', 'my order', 'what did i order', 'my cart']):
+                parsed["intent"] = "read_cart"
+                parsed["should_add"] = False
+                parsed["items_to_add"] = []
+            
+            elif any(word in message_lower for word in ['checkout', 'finalize', 'done ordering', "that's all", 'place order']):
+                parsed["intent"] = "checkout"
+                parsed["should_add"] = False
+                parsed["items_to_add"] = []
+                parsed["should_finalize"] = True
+
             # ===== 7. RESOLVE ITEM NAMES TO MENU IDs =====
             items_to_add = self._resolve_items(parsed.get("items_to_add", []), menu_items)
             items_rejected = self._resolve_items(parsed.get("items_rejected", []), menu_items)
@@ -361,6 +381,7 @@ Customer: "can I get a chicken sandwich with no pickles"
             intent = {
                 "type": parsed.get("intent", "menu_inquiry"),
                 "should_add": parsed.get("should_add", False) and len(items_to_add) > 0,
+                "should_finalize": parsed.get("should_finalize", False),
                 "items": items_to_add,
                 "items_rejected": items_rejected,
                 "awaiting_confirmation": parsed.get("awaiting_confirmation", False)

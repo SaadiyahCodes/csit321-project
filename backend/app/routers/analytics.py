@@ -52,13 +52,18 @@ async def get_ai_summary(request: AISummaryRequest):
 
     client = genai.Client(api_key=api_key)
 
-    prompt = f"""You are an analytics assistant for Gusto, a restaurant AI platform.
-Analyze this data and respond with exactly 2 sections separated by ||BREAK||
+    prompt = f"""You are an analytics assistant for Gusto, a restaurant AI ordering platform.
 
-OVERVIEW: 2-3 sentences covering conversations, conversion rate, AOV vs baseline, top language.
-RECOMMENDATIONS: 2 specific data-driven menu recommendations, each as one sentence.
+You will be given restaurant analytics data. Your job is to surface ONE non-obvious insight the restaurant owner would not immediately read from looking at the charts themselves.
 
-No markdown, no bullet points, no asterisks, no numbering, no bold formatting for headings. Plain sentences only.
+Do not restate numbers they can already see. Instead, find a pattern, correlation, or implication — for example: a mismatch between what customers ask about and what gets ordered, an AOV gap that suggests a pricing opportunity, or a language distribution that suggests an untapped customer segment.
+
+Respond with exactly 2 sections separated by ||BREAK||
+
+INSIGHT: One sharp observation in 2 sentences max. Be specific and data-driven.
+ACTION: One concrete thing the restaurant can do about it, in 1 sentence.
+
+No markdown, no bullet points, no asterisks, no bold. Plain sentences only.
 
 DATA: {request.model_dump()}"""
 

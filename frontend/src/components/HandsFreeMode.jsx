@@ -26,7 +26,11 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         // Start with language selection
         setStatus('language_select');
-        speakText("Hands-free mode activated. Please say your language: English, Arabic, Hindi, or Urdu.", 'en');
+        const prompt =
+            "Hands-free mode activated. Please say your language: " +
+            "English. Arabic - عربي. Hindi - हिंदी. Urdu - اردو. " +
+            "Spanish - Español. French - Français.";
+        speakText(prompt, 'en');
 
         return () => {
             if (recognitionRef.current) {
@@ -77,7 +81,9 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 'en': 'en-US',
                 'ar': 'ar-SA',
                 'hi': 'hi-IN',
-                'ur': 'ur-PK'
+                'ur': 'ur-PK',
+                'es': 'es-ES',
+                'fr': 'fr-FR'
             };
             recognitionRef.current.lang = langMap[language] || 'en-US';
 
@@ -115,13 +121,51 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         const textLower = text.toLowerCase();
         let selectedLang = 'en';
 
-        if (textLower.includes('arabic') || textLower.includes('arabi')) {
+        if (textLower.includes('english') || textLower.includes('inglish')) {
+            selectedLang = 'en';
+        }
+        // Arabic
+        else if (
+            textLower.includes('arabic') ||
+            textLower.includes('arabi') ||
+            textLower.includes('عربي') ||
+            textLower.includes('عرب')
+        ) {
             selectedLang = 'ar';
-        } else if (textLower.includes('hindi')) {
+        }
+        // Hindi
+        else if (
+            textLower.includes('hindi') ||
+            textLower.includes('हिंदी') ||
+            textLower.includes('हिन्दी')
+        ) {
             selectedLang = 'hi';
-        } else if (textLower.includes('urdu')) {
+        }
+        // Urdu
+        else if (
+            textLower.includes('urdu') ||
+            textLower.includes('اردو')
+        ) {
             selectedLang = 'ur';
         }
+        // Spanish (NEW!)
+        else if (
+            textLower.includes('spanish') ||
+            textLower.includes('español') ||
+            textLower.includes('espanol')
+        ) {
+            selectedLang = 'es';
+        }
+        // French (NEW!)
+        else if (
+            textLower.includes('french') ||
+            textLower.includes('français') ||
+            textLower.includes('francais')
+        ) {
+            selectedLang = 'fr';
+        }
+
+        console.log(`🌍 Language selected: ${selectedLang} from "${text}"`);
 
         setLanguage(selectedLang);
         setStatus('active');
@@ -130,7 +174,9 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             'en': "Welcome! I'll help you order. Say 'menu' to hear our dishes, or tell me what you'd like.",
             'ar': "مرحبا! سأساعدك في الطلب. قل 'القائمة' لسماع الأطباق، أو أخبرني بما تريد.",
             'hi': "स्वागत है! मैं आपकी ऑर्डर में मदद करूंगा। 'मेन्यू' कहें या मुझे बताएं कि आप क्या चाहते हैं।",
-            'ur': "خوش آمدید! میں آپ کی آرڈر میں مدد کروں گا۔ 'مینو' کہیں یا مجھے بتائیں کہ آپ کیا چاہتے ہیں۔"
+            'ur': "خوش آمدید! میں آپ کی آرڈر میں مدد کروں گا۔ 'مینو' کہیں یا مجھے بتائیں کہ آپ کیا چاہتے ہیں۔",
+            'es': "¡Bienvenido! Te ayudaré a ordenar. Di 'menú' para escuchar nuestros platos, o dime qué te gustaría.", // NEW!
+            'fr': "Bienvenue! Je vais vous aider à commander. Dites 'menu' pour entendre nos plats, ou dites-moi ce que vous aimeriez." // NEW!
         };
 
         speakText(welcomeMessages[selectedLang], selectedLang);
@@ -141,7 +187,13 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         try {
             // Check for special commands
-            if (textLower.includes('menu') || textLower.includes('मेन्यू') || textLower.includes('قائمة')) {
+            if (
+                textLower.includes('menu') ||
+                textLower.includes('मेन्यू') ||
+                textLower.includes('قائمة') ||
+                textLower.includes('menú') ||
+                textLower.includes('carte')
+            ) {
                 // Read full menu
                 const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/menu`, {
                     session_id: sessionId,
@@ -152,7 +204,14 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     speakText(res.data.text, language);
                 }
 
-            } else if (textLower.includes('cart') || textLower.includes('कार्ट') || textLower.includes('سلة')) {
+            } else if (
+                textLower.includes('cart') ||
+                textLower.includes('कार्ट') ||
+                textLower.includes('سلة') ||
+                textLower.includes('carrito') || // Spanish
+                textLower.includes('panier')     // French
+            ) {
+
                 // Read cart
                 const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/cart`, {
                     session_id: sessionId,
@@ -163,7 +222,14 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     speakText(res.data.text, language);
                 }
 
-            } else if (textLower.includes('checkout') || textLower.includes('चेकआउट') || textLower.includes('الدفع')) {
+            } else if (
+                textLower.includes('checkout') ||
+                textLower.includes('चेकआउट') ||
+                textLower.includes('الدفع') ||
+                textLower.includes('pagar') ||     // Spanish
+                textLower.includes('finalizar') || // Spanish
+                textLower.includes('payer')        // French
+            ) {
                 // Checkout
                 const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/checkout`, {
                     session_id: sessionId,
@@ -197,7 +263,15 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         } catch (error) {
             console.error('Command handling error:', error);
-            speakText("Sorry, I didn't understand. Please try again.", language);
+            const errorMessages = {
+                'en': "Sorry, I didn't understand. Please try again.",
+                'ar': "عذراً، لم أفهم. يرجى المحاولة مرة أخرى.",
+                'hi': "क्षमा करें, मैं समझ नहीं पाया। कृपया पुनः प्रयास करें।",
+                'ur': "معاف کیجیے، میں نہیں سمجھا۔ براہ کرم دوبارہ کوشش کریں۔",
+                'es': "Lo siento, no entendí. Por favor intenta de nuevo.", // NEW!
+                'fr': "Désolé, je n'ai pas compris. Veuillez réessayer." // NEW!
+            };
+            speakText(errorMessages[language] || errorMessages['en'], language);
         }
     };
 
@@ -245,8 +319,22 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             <div style={styles.instructions}>
                 <p style={styles.instructionText}>
                     {status === 'language_select' && 'Say your language...'}
-                    {status === 'active' && 'Say "menu" to hear dishes, or tell me what you want'}
-                    {status === 'checkout_complete' && 'Order complete! Have a nice meal!'}
+                    {status === 'active' && (
+                        language === 'ar' ? 'قل "القائمة" أو أخبرني بما تريد'
+                            : language === 'ur' ? '"مینو" کہیں یا بتائیں کہ آپ کیا چاہتے ہیں'
+                                : language === 'hi' ? '"मेन्यू" कहें या बताएं कि आप क्या चाहते हैं'
+                                    : language === 'es' ? 'Di "menú" o dime qué quieres'  // NEW!
+                                        : language === 'fr' ? 'Dites "menu" ou dites-moi ce que vous voulez'  // NEW!
+                                            : 'Say "menu" to hear dishes, or tell me what you want'
+                    )}
+                    {status === 'checkout_complete' && (
+                        language === 'ar' ? 'الطلب مكتمل! استمتع بوجبتك!'
+                            : language === 'ur' ? 'آرڈر مکمل! کھانے کا لطف اٹھائیں!'
+                                : language === 'hi' ? 'ऑर्डर पूरा! भोजन का आनंद लें!'
+                                    : language === 'es' ? '¡Pedido completo! ¡Disfruta tu comida!'  // NEW!
+                                        : language === 'fr' ? 'Commande terminée! Bon appétit!'  // NEW!
+                                            : 'Order complete! Enjoy your meal!'
+                    )}
                 </p>
             </div>
         </div>

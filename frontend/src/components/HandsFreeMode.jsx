@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import api from '../api';
 
 const HandsFreeMode = ({ sessionId, onExit }) => {
     const [isListening, setIsListening] = useState(false);
@@ -51,9 +52,8 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         setResponse(text);
 
         try {
-            const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/tts`, {
-                text: text,
-                language: lang
+            const res = await api.post('/api/voice/tts', null, {
+                params: { text, language: lang }
             });
 
             if (res.data.audio) {
@@ -195,7 +195,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 textLower.includes('carte')
             ) {
                 // Read full menu
-                const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/menu`, {
+                const res = await api.post('/api/voice/handsfree/menu', {
                     session_id: sessionId,
                     language: language
                 });
@@ -213,7 +213,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             ) {
 
                 // Read cart
-                const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/cart`, {
+                const res = await api.post('/api/voice/handsfree/cart', {
                     session_id: sessionId,
                     language: language
                 });
@@ -231,7 +231,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 textLower.includes('payer')        // French
             ) {
                 // Checkout
-                const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/handsfree/checkout`, {
+                const res = await api.post('/api/voice/handsfree/checkout', {
                     session_id: sessionId,
                     language: language
                 });
@@ -243,8 +243,8 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
             } else {
                 // Regular chatbot conversation
-                const chatRes = await axios.post(`${process.env.REACT_APP_API_URL}/api/voice/chat`, {
-                    audio: null, // We already have text
+                const chatRes = await api.post('/api/voice/chat', {
+                    audio: null,
                     session_id: sessionId,
                     language: language,
                     text: text,

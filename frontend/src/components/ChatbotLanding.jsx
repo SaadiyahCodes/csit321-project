@@ -22,9 +22,6 @@ export default function LandingChatbot({ isOpen, onClose }) {
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
     () => localStorage.getItem("voiceReplyEnabled") === "true"
   );
-  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
-    () => localStorage.getItem("voiceReplyEnabled") === "true"
-  );
   const [handsFreeMode, setHandsFreeMode] = useState(false);
 
   // Voice Recording

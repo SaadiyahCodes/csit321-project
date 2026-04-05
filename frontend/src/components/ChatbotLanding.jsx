@@ -367,12 +367,15 @@ export default function LandingChatbot({ isOpen, onClose }) {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <LanguageSelector variant="compact" />
 
-            {/* ===== NEW: HANDS-FREE BUTTON ===== */}
+            {/* HANDS-FREE BUTTON - FIXED */}
             <button
-              onClick={() => setHandsFreeMode(true)}
+              onClick={() => {
+                console.log("🎤 Opening Hands-Free Mode");
+                setHandsFreeMode(true);
+              }}
               title="Accessibility Mode - Hands-Free Ordering"
               style={{
-                background: "rgba(76, 175, 80, 0.9)", // Green for accessibility
+                background: "rgba(76, 175, 80, 0.9)",
                 border: "1px solid rgba(255,255,255,0.4)",
                 borderRadius: "8px",
                 padding: "6px 12px",
@@ -381,10 +384,22 @@ export default function LandingChatbot({ isOpen, onClose }) {
                 justifyContent: "center",
                 gap: "6px",
                 cursor: "pointer",
-                transition: "background 0.2s",
+                transition: "all 0.2s",
                 fontSize: "11px",
                 fontWeight: "600",
                 color: "white",
+                position: "relative",
+                zIndex: 100,
+                pointerEvents: "auto",
+                flexShrink: 0,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(76, 175, 80, 1)";
+                e.currentTarget.style.transform = "scale(1.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(76, 175, 80, 0.9)";
+                e.currentTarget.style.transform = "scale(1)";
               }}
             >
               ♿ Hands-Free

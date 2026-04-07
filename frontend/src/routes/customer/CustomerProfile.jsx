@@ -3,11 +3,12 @@ import { User, ArrowLeft, Edit2, Save, X, LogOut } from 'lucide-react';
 import {useNavigate} from 'react-router-dom';
 import {useCustomerAuth} from '../../context/CustomerAuthContext';
 import api from '../../api';
+import { useToast } from "../../components/Toast";
 
 const CustomerProfile = () => {
   const navigate = useNavigate();
   const { customer, logout, loading: authLoading, fetchCustomer } = useCustomerAuth();
-
+  const { showToast, ToastContainer } = useToast();
   const [isEditingAllergens, setIsEditingAllergens] = useState(false);
   const [isEditingDietary, setIsEditingDietary] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -82,7 +83,7 @@ const CustomerProfile = () => {
       await fetchCustomer();
     } catch (error) {
       console.error('Error saving allergens:', error);
-      alert('Failed to save allergens. Please try again.');
+      showToast('Failed to save allergens. Please try again.', "error");
     } finally {
       setSaving(false);
     }
@@ -105,7 +106,7 @@ const CustomerProfile = () => {
       await fetchCustomer();
     } catch (error) {
       console.error('Error saving dietary preferences:', error);
-      alert('Failed to save dietary preferences. Please try again.');
+      showToast('Failed to save dietary preferences. Please try again.', "error");
     } finally {
       setSaving(false);
     }
@@ -144,7 +145,7 @@ const CustomerProfile = () => {
       setIsEditingInfo(false);
     } catch (error) {
       console.error('Error saving info:', error);
-      alert('Failed to save. Please try again.');
+      showToast('Failed to save. Please try again.', "error");
     } finally {
       setSaving(false);
     }
@@ -840,6 +841,7 @@ const CustomerProfile = () => {
         </div>
 
       </div>
+      {ToastContainer}
     </div>
   );
 };

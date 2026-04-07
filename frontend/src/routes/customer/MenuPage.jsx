@@ -13,13 +13,14 @@ import { useLanguage } from "../../context/LanguageContext";
 import { useSession } from "../../context/SessionContext";
 import api from "../../api";
 import logo4 from "../../assets/gusto-logo4.png";
+import { useToast } from "../../components/Toast";
 
 export default function MenuPage() {
   const { restaurantId } = useParams();
   const { language, tSync } = useLanguage();
   const { sessionId, selectionId, cartCount, fetchCartCount } = useSession();
   const navigate = useNavigate();
-
+  const { showToast, ToastContainer } = useToast();
   const [activeCategory, setActiveCategory] = useState("all");
   const [menuItems, setMenuItems] = useState([]);
   const [restaurant, setRestaurant] = useState(null);
@@ -70,7 +71,11 @@ export default function MenuPage() {
         map[it.menu_item_id] = { qty: it.quantity, selectionItemId: it.id };
       }
       setLocalCart(map);
-    } catch { /* non-critical */ }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setLocalCart({}); // stale selection, just clear it silently
+      }
+    }
   };
 
   const handleAddToCart = async (item, qty = 1, notes = null) => {
@@ -101,7 +106,7 @@ export default function MenuPage() {
         else next[item.id] = { ...next[item.id], qty: newQty };
         return next;
       });
-      alert(tSync("Failed to add item to cart"));
+      showToast(tSync("Failed to add item to cart"), "error");
     }
   };
 
@@ -134,7 +139,7 @@ export default function MenuPage() {
   };
 
   const onAR = (item) => {
-    if (!item.ar_model_url) { alert("AR model not available for this item."); return; }
+    if (!item.ar_model_url) { showToast("AR model not available for this item.", "error"); return; }
     navigate(`/ar?model=${encodeURIComponent(item.ar_model_url)}`);
   };
 
@@ -363,6 +368,7 @@ export default function MenuPage() {
           onAddToCart={handleAddToCart}
         />
       )}
+      {ToastContainer}
     </div>
   );
 }

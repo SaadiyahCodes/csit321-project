@@ -5,17 +5,19 @@ import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, MapPin } from "lucide-rea
 import TranslatedText from "../../components/TranslatedText";
 import LanguageSelector from "../../components/LanguageSelector";
 import Chatbot from "../../components/Chatbot";
-import BottomNav from "../../components/BottomNav";
 import { useSession } from "../../context/SessionContext";
 import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 import logo4 from "../../assets/gusto-logo4.png";
+import { useConfirm } from "../../components/ConfirmDialog";
+import { useToast } from "../../components/Toast";
 
 export default function CartPage() {
   const navigate = useNavigate();
-  const { sessionId, selectionId, restaurantId, loading: sessionLoading } = useSession();
+  const { sessionId, selectionId, restaurantId, loading: sessionLoading, fetchCartCount } = useSession();
   const { language, tSync } = useLanguage();
-
+  const { confirm, ConfirmContainer } = useConfirm();
+  const { showToast, ToastContainer } = useToast();
   const [selection, setSelection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -85,21 +87,20 @@ export default function CartPage() {
       try {
         if (newQty === 0) {
           await api.delete(`/api/selections/items/${itemId}?session_id=${sessionId}`);
-          // Refetch only when item is fully removed so list updates
-          await fetchCart();
-        } else {
-          await api.put(`/api/selections/items/${itemId}?session_id=${sessionId}`, { quantity: newQty });
-          // Update totals silently without full reload
+          // Remove from local state instead of full refetch
           setSelection(prev => {
             if (!prev) return prev;
-            const items = prev.items.map(it => {
-              if (it.id !== itemId) return it;
-              return { ...it, quantity: newQty, item_total: it.menu_item.price * newQty };
-            });
+            const items = prev.items.filter(it => it.id !== itemId);
             const total_price = items.reduce((s, it) => s + it.item_total, 0);
             const item_count = items.reduce((s, it) => s + it.quantity, 0);
             return { ...prev, items, total_price, item_count };
           });
+          setLocalQtys(prev => {
+            const next = { ...prev };
+            delete next[itemId];
+            return next;
+          });
+          fetchCartCount();
         }
       } catch (err) {
         console.error("Sync failed:", err);
@@ -109,7 +110,8 @@ export default function CartPage() {
   };
 
   const removeItem = async (itemId) => {
-    if (!confirm(tSync("Remove this item from cart?"))) return;
+    const ok = await confirm(tSync("Remove this item from cart?"));
+    if (!ok) return;
     // Instant remove from UI
     setSelection(prev => {
       if (!prev) return prev;
@@ -120,8 +122,10 @@ export default function CartPage() {
     });
     try {
       await api.delete(`/api/selections/items/${itemId}?session_id=${sessionId}`);
+      fetchCartCount();
     } catch (err) {
       console.error("Error removing item:", err);
+      showToast("Error removing item:" + err, "error")
       await fetchCart(); // restore on error
     }
   };
@@ -454,6 +458,8 @@ export default function CartPage() {
       </div>
 
       <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {ConfirmContainer}
+      {ToastContainer}
     </div>
   );
 }

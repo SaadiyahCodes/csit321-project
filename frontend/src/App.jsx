@@ -8,8 +8,6 @@ import AdminRoute from './routes/AdminRoute';
 import AdminAnalytics from './routes/AdminAnalytics';
 import LandingPage from './routes/customer/LandingPage';
 import MenuPage from './routes/customer/MenuPage';
-import DishPreviewPage from './routes/customer/DishPreviewPage';
-import DishCustomizationPage from './routes/customer/DishCustomizationPage';
 import CartPage from './routes/customer/CartPage';
 import OrderSummaryPage from './routes/customer/OrderSummaryPage';
 import CustomerLogin from './routes/customer/CustomerLogin';
@@ -33,8 +31,6 @@ function App() {
           <SessionProvider>
             <Routes>
               <Route path="menu" element={<MenuPage />} />
-              <Route path="dish/:dishId" element={<DishPreviewPage />} />
-              <Route path="customize/:dishId" element={<DishCustomizationPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="order-summary" element={<OrderSummaryPage />} />
             </Routes>

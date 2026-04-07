@@ -4,9 +4,11 @@ import { X, Plus, Minus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import TranslatedText from "./TranslatedText";
 import { useLanguage } from "../context/LanguageContext";
+import { useToast } from "./Toast";
 
 export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty = 0 }) {
   const { tSync } = useLanguage();
+  const { showToast, ToastContainer } = useToast();
   const navigate = useNavigate();
   const [qty, setQty] = useState(initialQty > 0 ? initialQty : 1);
   const [notes, setNotes] = useState("");
@@ -39,8 +41,8 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
 
   const onAR = () => {
     console.log("onAR fired, ar_model_url:", item.ar_model_url);
-    if (!item.ar_model_url) { alert("AR model not available for this item."); return; }
-    if (!isLikelyARCapable()) { alert("AR Preview is only available on mobile and tablet devices."); return; }
+    if (!item.ar_model_url) { showToast("AR model not available for this item.", "error"); return; }
+    if (!isLikelyARCapable()) { showToast("AR Preview is only available on mobile and tablet devices.", "error"); return; }
     navigate(`/ar?model=${encodeURIComponent(item.ar_model_url)}`);
   };
 
@@ -292,6 +294,7 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
           }
         `}</style>
       </div>
+      {ToastContainer}
     </>
   );
 }

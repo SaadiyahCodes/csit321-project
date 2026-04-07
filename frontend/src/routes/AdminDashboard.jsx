@@ -5,6 +5,8 @@ import { Plus, LogOut, Search, BarChart3 } from 'lucide-react';
 import api from "../api";
 import MenuItemCard from "../components/MenuItemCard";
 import MenuItemForm from "../components/MenuItemForm";
+import { useToast } from "../components/Toast";
+import { useConfirm } from "../components/ConfirmDialog";
 
 const CATEGORIES = ["mains", "sides", "dessert", "drinks"];
 
@@ -19,6 +21,8 @@ const apiCalls = {
 
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
+  const { showToast, ToastContainer } = useToast();
+  const { confirm, ConfirmContainer } = useConfirm();
   const navigate = useNavigate(); 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
@@ -41,7 +45,7 @@ export default function AdminDashboard() {
       setMenuItems(menuRes.data);
     } catch (error) {
       console.error('Error loading data:', error);
-      alert('Error loading dashboard data: ' + (error.response?.data?.message || error.message));
+      showToast('Error loading dashboard data: ' + (error.response?.data?.message || error.message), "error");
     } finally {
       setLoading(false);
     }
@@ -67,22 +71,25 @@ export default function AdminDashboard() {
         setMenuItems([...menuItems, response.data]);
       }
       setShowForm(false);
+      showToast(editingItem ? 'Item updated successfully' : 'Item added successfully', 'success');
       setEditingItem(null);
     } catch (error) {
       console.error('Error saving item:', error);
-      alert('Error saving menu item');
+      showToast('Error saving menu item', "error");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
-    
+    const ok = await confirm("Are you sure you want to delete this item?");
+    if (!ok) return;
+
     try {
       await apiCalls.deleteMenuItem(id);
       setMenuItems(menuItems.filter(item => item.id !== id));
+      showToast("Item deleted", "success");
     } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('Error deleting menu item');
+      console.error("Error deleting item:", error);
+      showToast("Error deleting menu item", "error");
     }
   };
 
@@ -453,6 +460,8 @@ export default function AdminDashboard() {
           }}
         />
       )}
+      {ToastContainer}
+      {ConfirmContainer}
     </div>
   );
 }

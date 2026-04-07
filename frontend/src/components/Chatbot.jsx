@@ -7,13 +7,15 @@ import { useLanguage } from "../context/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
 import api from "../api";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "./Toast";
 
 export default function Chatbot({ isOpen, onClose }) {
   const { customer, profile } = useCustomerAuth();
 
   const navigate = useNavigate();
-  const { sessionId, restaurantId } = useSession();
+  const { sessionId, restaurantId, fetchCartCount } = useSession();
   const { language } = useLanguage();
+  const { showToast, ToastContainer } = useToast();
 
   // UI State
   const [messages, setMessages] = useState([]);
@@ -133,11 +135,13 @@ export default function Chatbot({ isOpen, onClose }) {
       if (voiceReplyEnabled) {
         await speakText(response.data.response);
       }
+      fetchCartCount();
 
       // Show notification if items were added to cart
-      if (response.data.intent?.items?.length > 0) {
-        const itemNames = response.data.intent.items.map((item) => item.name).join(", ");
-        alert(`✅ Added to cart: ${itemNames}`);
+      if (response.data.intent?.should_add && response.data.intent?.items?.length > 0) {
+        const itemNames = response.data.intent.items.map(i => i.name).join(", ");
+        showToast(`Added to cart: ${itemNames}`, "success");
+        fetchCartCount();
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -200,7 +204,7 @@ export default function Chatbot({ isOpen, onClose }) {
           });
           await sendVoiceMessage(audioBlob);
         } else {
-          alert("No audio was recorded. Please try again.");
+          showToast("No audio was recorded. Please try again.", "error");
         }
 
         stream.getTracks().forEach((track) => track.stop());
@@ -211,7 +215,7 @@ export default function Chatbot({ isOpen, onClose }) {
       setIsRecording(true);
     } catch (error) {
       console.error("❌ Microphone access error:", error);
-      alert("Please allow microphone access to use voice chat");
+      showToast("Please allow microphone access to use voice chat", "error");
     }
   };
 
@@ -259,6 +263,7 @@ export default function Chatbot({ isOpen, onClose }) {
             };
 
             setMessages((prev) => [...prev, userMessage, botMessage]);
+            fetchCartCount();
 
             if (response.data.bot_audio) {
               try {
@@ -271,14 +276,14 @@ export default function Chatbot({ isOpen, onClose }) {
 
             if (response.data.items_added_to_cart?.length > 0) {
               const itemNames = response.data.items_added_to_cart.join(", ");
-              alert(`✅ Added to cart: ${itemNames}`);
+              showToast(`Added to cart: ${itemNames}`, "success");
             }
           } else {
             throw new Error(response.data.error || "Voice processing failed");
           }
         } catch (apiError) {
           console.error("❌ API call failed:", apiError);
-          alert("Voice message failed. Please try typing instead.");
+          showToast("Voice message failed. Please try typing instead.", "error");
         } finally {
           setIsTyping(false); // ← clears after API resolves
           setIsSending(false);
@@ -286,14 +291,14 @@ export default function Chatbot({ isOpen, onClose }) {
       };
 
       reader.onerror = () => {
-        alert("Failed to process audio. Please try again.");
+        showToast("Failed to process audio. Please try again.", "error");
         setIsSending(false);
       };
 
       reader.readAsDataURL(audioBlob);
     } catch (error) {
       console.error("❌ Voice message error:", error);
-      alert("Voice message failed. Please try typing instead.");
+      showToast("Voice message failed. Please try typing instead.", "error");
       setIsSending(false);
     }
   };
@@ -767,6 +772,7 @@ export default function Chatbot({ isOpen, onClose }) {
           )}
         </div>
       </div>
+      {ToastContainer}
     </>
   );
 }

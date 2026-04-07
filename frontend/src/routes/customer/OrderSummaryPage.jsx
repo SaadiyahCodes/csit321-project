@@ -8,6 +8,7 @@ import { useSession } from "../../context/SessionContext";
 import { useLanguage } from "../../context/LanguageContext";
 import api from "../../api";
 import logo4 from "../../assets/gusto-logo4.png";
+import { useToast } from "../../components/Toast";
 
 // ── Confetti ──────────────────────────────────────────────
 const COLORS = ["#f97316","#ea580c","#fbbf24","#34d399","#60a5fa","#f472b6","#a78bfa"];
@@ -79,7 +80,7 @@ export default function OrderSummaryPage() {
   const navigate = useNavigate();
   const { sessionId, selectionId, restaurantId, refreshSelection } = useSession();
   const { tSync } = useLanguage();
-
+  const { showToast, ToastContainer } = useToast();
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
@@ -118,7 +119,7 @@ export default function OrderSummaryPage() {
       setTimeout(() => setShowConfetti(false), 4000);
     } catch (err) {
       console.error("Error finalizing order:", err);
-      alert(err.response?.data?.detail || tSync("Failed to finalize order"));
+      showToast(err.response?.data?.detail || tSync("Failed to finalize order"), "error");
       navigate(`/restaurant/${restaurantId}/cart`);
     } finally {
       setFinalizing(false);
@@ -345,6 +346,7 @@ export default function OrderSummaryPage() {
           </button>
         </div>
       </div>
+      {ToastContainer}
     </div>
   );
 }

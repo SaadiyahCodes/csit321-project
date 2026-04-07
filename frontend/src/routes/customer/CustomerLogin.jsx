@@ -139,7 +139,7 @@ const CustomerLogin = () => {
                 color: '#2d3748',
                 marginBottom: '8px'
               }}>
-                Full Name
+                Full Name <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <input
                 type="text"
@@ -172,7 +172,7 @@ const CustomerLogin = () => {
               color: '#2d3748',
               marginBottom: '8px'
             }}>
-              Email Address
+              Email Address <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="email"
@@ -205,13 +205,14 @@ const CustomerLogin = () => {
                 color: '#2d3748',
                 marginBottom: '8px'
               }}>
-                Phone Number (Optional)
+                Phone Number <span style={{ color: "#ef4444" }}>*</span>
               </label>
               <input
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 placeholder="+971 XX XXX XXXX"
+                required
                 style={{
                   width: '100%',
                   padding: '14px 16px',
@@ -237,7 +238,7 @@ const CustomerLogin = () => {
               color: '#2d3748',
               marginBottom: '8px'
             }}>
-              Password
+              Password <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="password"

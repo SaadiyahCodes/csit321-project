@@ -14,11 +14,15 @@ import { useSession } from "../../context/SessionContext";
 import api from "../../api";
 import logo4 from "../../assets/gusto-logo4.png";
 import { useToast } from "../../components/Toast";
+import { useCustomerAuth } from "../../context/CustomerAuthContext";
+import { useConfirm } from "../../components/ConfirmDialog";
 
 export default function MenuPage() {
   const { restaurantId } = useParams();
   const { language, tSync } = useLanguage();
   const { sessionId, selectionId, cartCount, fetchCartCount } = useSession();
+  const { customer, profile } = useCustomerAuth();
+  const { confirm, ConfirmContainer } = useConfirm();
   const navigate = useNavigate();
   const { showToast, ToastContainer } = useToast();
   const [activeCategory, setActiveCategory] = useState("all");
@@ -43,6 +47,23 @@ export default function MenuPage() {
   useEffect(() => {
     return () => Object.values(debounceTimers.current).forEach(clearTimeout);
   }, []);
+
+  const getProfileConflicts = (item) => {
+    if (!profile) return [];
+    const conflicts = [];
+
+    const itemAllergens = (item.allergens || []).map(a => a.toLowerCase());
+
+    // Check allergens — direct match against item's allergens field
+    for (const allergen of (profile.allergens || [])) {
+      const a = allergen.toLowerCase();
+      if (itemAllergens.some(ia => ia.includes(a) || a.includes(ia))) {
+        conflicts.push(allergen);
+      }
+    }
+
+    return conflicts;
+  };
 
   const fetchMenuItems = async () => {
     setLoading(true);
@@ -80,6 +101,15 @@ export default function MenuPage() {
 
   const handleAddToCart = async (item, qty = 1, notes = null) => {
     if (!selectionId || !sessionId) return;
+
+    // Check profile conflicts
+    const conflicts = getProfileConflicts(item);
+    if (conflicts.length > 0) {
+      const message = `⚠️ ${item.name} contains ${conflicts.join(", ")} which is listed in your allergen profile. Add anyway?`;
+      const ok = await confirm(message, "Add", "#16a34a");
+      if (!ok) return;
+    }
+    
     setLocalCart(prev => ({
       ...prev,
       [item.id]: { qty: (prev[item.id]?.qty || 0) + qty, selectionItemId: prev[item.id]?.selectionItemId || null },
@@ -138,8 +168,11 @@ export default function MenuPage() {
     }, 600);
   };
 
+  const isLikelyARCapable = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
   const onAR = (item) => {
     if (!item.ar_model_url) { showToast("AR model not available for this item.", "error"); return; }
+    if (!isLikelyARCapable()) { showToast("AR Preview is only available on mobile and tablet devices.", "error"); return; }
     navigate(`/ar?model=${encodeURIComponent(item.ar_model_url)}`);
   };
 
@@ -368,6 +401,7 @@ export default function MenuPage() {
           onAddToCart={handleAddToCart}
         />
       )}
+      {ConfirmContainer}
       {ToastContainer}
     </div>
   );

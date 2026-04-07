@@ -549,7 +549,7 @@ export default function LandingPage() {
 
   const filtered = restaurants.filter(r =>
     r.name.toLowerCase().replace(/[^a-z0-9\s]/g, "").includes(
-      searchQuery.toLowerCase().replace(/[^a-z0-9\s]/g, "")
+      searchQuery.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim()
     )
   );
 

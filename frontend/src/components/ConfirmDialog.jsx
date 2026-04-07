@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
-export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = "Delete", confirmColor = "#dc2626" }) {
+export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = "Confirm", confirmColor = "#f97316" }) {
   return (
     <>
       {/* Backdrop */}
@@ -88,10 +88,12 @@ export function ConfirmDialog({ message, onConfirm, onCancel, confirmLabel = "De
 export function useConfirm() {
   const [dialog, setDialog] = useState(null);
 
-  const confirm = (message) =>
+  const confirm = (message, confirmLabel = "Confirm", confirmColor = "#f97316") =>
     new Promise((resolve) => {
       setDialog({
         message,
+        confirmLabel,
+        confirmColor,
         onConfirm: () => { setDialog(null); resolve(true); },
         onCancel:  () => { setDialog(null); resolve(false); },
       });
@@ -100,6 +102,8 @@ export function useConfirm() {
   const ConfirmContainer = dialog ? (
     <ConfirmDialog
       message={dialog.message}
+      confirmLabel={dialog.confirmLabel}
+      confirmColor={dialog.confirmColor}
       onConfirm={dialog.onConfirm}
       onCancel={dialog.onCancel}
     />

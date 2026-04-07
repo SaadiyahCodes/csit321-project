@@ -80,7 +80,7 @@ export default function AdminDashboard() {
   };
 
   const handleDelete = async (id) => {
-    const ok = await confirm("Are you sure you want to delete this item?");
+    const ok = await confirm("Are you sure you want to delete this item?", "Delete", "#dc2626");
     if (!ok) return;
 
     try {

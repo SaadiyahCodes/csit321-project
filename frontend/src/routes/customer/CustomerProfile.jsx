@@ -7,7 +7,7 @@ import { useToast } from "../../components/Toast";
 
 const CustomerProfile = () => {
   const navigate = useNavigate();
-  const { customer, logout, loading: authLoading, fetchCustomer } = useCustomerAuth();
+  const { customer, logout, loading: authLoading, setCustomer } = useCustomerAuth();
   const { showToast, ToastContainer } = useToast();
   const [isEditingAllergens, setIsEditingAllergens] = useState(false);
   const [isEditingDietary, setIsEditingDietary] = useState(false);
@@ -44,46 +44,52 @@ const CustomerProfile = () => {
     }
   }, [customer]);
 
+  // OPTIMIZATION 1: Parallelize all 3 API calls instead of sequential
   const fetchProfileData = async () => {
     try {
       setLoading(true);
 
-      // Fetch profile
-      const profileRes = await api.get('/api/customer/profile/');
+      const [profileRes, optionsRes, ordersRes] = await Promise.all([
+        api.get('/api/customer/profile/'),
+        api.get('/api/customer/profile/options'),
+        api.get('/api/customer/orders/history')
+      ]);
+
       setProfile(profileRes.data);
       setAllergens(profileRes.data.allergens || []);
       setTempAllergens(profileRes.data.allergens || []);
       setDietaryPrefs(profileRes.data.dietary_preferences || []);
       setTempDietaryPrefs(profileRes.data.dietary_preferences || []);
-
-      // Fetch available options
-      const optionsRes = await api.get('/api/customer/profile/options');
+      
       setAvailableAllergens(optionsRes.data.available_allergens);
       setAvailableDietaryPrefs(optionsRes.data.available_dietary_preferences);
-
-      // Fetch order history
-      const ordersRes = await api.get('/api/customer/orders/history');
+      
       setOrderHistory(ordersRes.data);
 
     } catch (error) {
       console.error('Error fetching profile:', error);
+      showToast('Failed to load profile. Please try again.', "error");
     } finally {
       setLoading(false);
     }
   };
 
+  // OPTIMIZATION 2: Update local state only, no context refetch
   const handleSaveAllergens = async () => {
     try {
       setSaving(true);
       await api.put('/api/customer/profile/', {
         allergens: tempAllergens
       });
+      // Update local state immediately (optimistic update)
       setAllergens([...tempAllergens]);
       setIsEditingAllergens(false);
-      await fetchCustomer();
+      showToast('Allergens updated successfully!', "success");
     } catch (error) {
       console.error('Error saving allergens:', error);
       showToast('Failed to save allergens. Please try again.', "error");
+      // Revert on error
+      setTempAllergens([...allergens]);
     } finally {
       setSaving(false);
     }
@@ -95,18 +101,22 @@ const CustomerProfile = () => {
     setIsEditingAllergens(false);
   };
 
+  // OPTIMIZATION 3: Update local state only, no context refetch
   const handleSaveDietary = async () => {
     try {
       setSaving(true);
       await api.put('/api/customer/profile/', {
         dietary_preferences: tempDietaryPrefs
       });
+      // Update local state immediately (optimistic update)
       setDietaryPrefs([...tempDietaryPrefs]);
       setIsEditingDietary(false);
-      await fetchCustomer();
+      showToast('Dietary preferences updated successfully!', "success");
     } catch (error) {
       console.error('Error saving dietary preferences:', error);
       showToast('Failed to save dietary preferences. Please try again.', "error");
+      // Revert on error
+      setTempDietaryPrefs([...dietaryPrefs]);
     } finally {
       setSaving(false);
     }
@@ -133,7 +143,7 @@ const CustomerProfile = () => {
     }
   };
 
-  // CHANGE 1: handleSaveInfo — saves name and phone, then refreshes customer context
+  // OPTIMIZATION 4: Update context directly, no refetch needed
   const handleSaveInfo = async () => {
     try {
       setSaving(true);
@@ -141,8 +151,16 @@ const CustomerProfile = () => {
         name: tempName,
         phone_number: tempPhone
       });
-      await fetchCustomer();
+      
+      // Update context customer object directly (no API refetch)
+      setCustomer(prev => ({
+        ...prev,
+        name: tempName,
+        phone_number: tempPhone
+      }));
+      
       setIsEditingInfo(false);
+      showToast('Profile updated successfully!', "success");
     } catch (error) {
       console.error('Error saving info:', error);
       showToast('Failed to save. Please try again.', "error");
@@ -151,7 +169,6 @@ const CustomerProfile = () => {
     }
   };
 
-  // CHANGE 2: addCustomAllergen — adds a user-typed allergen to tempAllergens
   const addCustomAllergen = () => {
     const val = customAllergen.trim().toLowerCase();
     if (val && !tempAllergens.includes(val)) {
@@ -186,7 +203,7 @@ const CustomerProfile = () => {
       backgroundColor: '#f3f4f6',
       paddingBottom: '40px'
     }}>
-      {/* Header — unchanged */}
+      {/* Header */}
       <div style={{
         background: 'linear-gradient(to right, #f97316, #ea580c)',
         padding: '24px 20px',
@@ -250,13 +267,7 @@ const CustomerProfile = () => {
         padding: '24px 20px'
       }}>
         
-        {/*
-          CHANGE 1: Profile Info Card
-          - Added Edit button top-right
-          - When editing: shows name + phone inputs (email stays read-only)
-          - Save calls handleSaveInfo → PUT /api/customer/profile/ → fetchCustomer()
-          - Cancel resets to current customer values
-        */}
+        {/* Profile Info Card */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -400,13 +411,7 @@ const CustomerProfile = () => {
           </div>
         </div>
 
-        {/*
-          CHANGE 2: Allergens Card
-          - Edit mode outer div changed to flexDirection column
-          - First row: all preset allergen toggle buttons + custom allergens rendered as removable tags
-          - Second row: text input + Add button for custom allergens
-          - Cancel also clears the customAllergen input state
-        */}
+        {/* Allergens Card */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -490,7 +495,6 @@ const CustomerProfile = () => {
           </div>
 
           {!isEditingAllergens ? (
-            // View mode — unchanged
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {allergens.length > 0 ? (
                 allergens.map((allergen, index) => (
@@ -514,9 +518,8 @@ const CustomerProfile = () => {
               )}
             </div>
           ) : (
-            // Edit mode — column layout: buttons row + custom input row
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Row 1: preset allergen toggles + any custom allergens already added */}
+              {/* Row 1: preset allergen toggles + custom allergens */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {availableAllergens.map((allergen, index) => (
                   <button
@@ -539,7 +542,7 @@ const CustomerProfile = () => {
                     {allergen}
                   </button>
                 ))}
-                {/* Custom allergens (not in preset list) shown as removable tags */}
+                {/* Custom allergens shown as removable tags */}
                 {tempAllergens
                   .filter(a => !availableAllergens.includes(a))
                   .map((allergen, index) => (
@@ -601,7 +604,7 @@ const CustomerProfile = () => {
           )}
         </div>
 
-        {/* Dietary Preferences Card — unchanged */}
+        {/* Dietary Preferences Card */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',
@@ -734,7 +737,7 @@ const CustomerProfile = () => {
           )}
         </div>
 
-        {/* Order History Card — unchanged */}
+        {/* Order History Card */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '16px',

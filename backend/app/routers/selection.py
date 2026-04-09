@@ -5,7 +5,8 @@ from app.schemas.selection import(
     SelectionItemAdd,
     SelectionItemUpdate,
     SelectionResponse, 
-    SelectionFinalizeResponse
+    SelectionFinalizeResponse,
+    SelectionFinalizeRequest
 )
 from app.crud import selection as selection_crud
 from app.crud import session as session_crud
@@ -97,37 +98,49 @@ def delete_selection_item(item_id: int, session_id: str, db: Session = Depends(g
 #Finalize selections
 
 @router.post("/{selection_id}/finalize", response_model=SelectionFinalizeResponse)
-def finalize_order(selection_id: int, session_id: str, db: Session = Depends(get_db)):
+def finalize_order(
+    selection_id: int, 
+    session_id: str, 
+    finalize_data: SelectionFinalizeRequest,  # ADD THIS
+    db: Session = Depends(get_db)
+):
     selection = selection_crud.get_selection_by_id(db, selection_id)
     if not selection or selection.session_id != session_id:
         raise HTTPException(status_code=404, detail="Selection not found")
     
-    #link to customer if session has one
+    # Validate order type data
+    if finalize_data.order_type == "dine_in" and not finalize_data.table_number:
+        raise HTTPException(status_code=400, detail="Table number required for dine-in orders")
+    if finalize_data.order_type == "delivery" and not finalize_data.delivery_address:
+        raise HTTPException(status_code=400, detail="Delivery address required for delivery orders")
+    
+    # Set order details
+    selection.order_type = finalize_data.order_type
+    selection.table_number = finalize_data.table_number if finalize_data.order_type == "dine_in" else None
+    selection.delivery_address = finalize_data.delivery_address if finalize_data.order_type == "delivery" else None
+    
+    # Link to customer if session has one
     session = session_crud.get_session_by_id(db, session_id)
-    print(f"🔍 Finalizing - Session ID: {session_id}")
-    print(f"🔍 Session customer_id: {session.customer_id if session else 'NO SESSION'}")
-    print(f"🔍 Selection customer_id BEFORE: {selection.customer_id}")
-
     if session and session.customer_id:
         selection.customer_id = session.customer_id
         db.commit()
         db.refresh(selection)
-        print(f"🔍 Selection customer_id AFTER: {selection.customer_id}")
-    else:
-        print(f"❌ NOT LINKING - Session has no customer_id")
 
     try:
         selection_crud.finalize_selection(db, selection)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-    # Generate comprehensive response with all items
+    # Generate response with all items
     response = SelectionResponse.model_validate(selection)
     
-    # Build detailed order data for QR code
+    # Build QR payload
     qr_payload = {
         "selection_id": selection.id,
         "restaurant_id": selection.restaurant_id,
+        "order_type": selection.order_type,
+        "table_number": selection.table_number,
+        "delivery_address": selection.delivery_address,
         "total_price": response.total_price,
         "item_count": response.item_count,
         "finalized_at": selection.finalized_at.isoformat(),

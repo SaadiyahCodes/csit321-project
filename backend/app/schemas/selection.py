@@ -14,6 +14,11 @@ class SelectionItemUpdate(BaseModel):
     quantity: int | None = Field(None, ge=0)
     notes: str | None = None
 
+class SelectionFinalizeRequest(BaseModel):
+    order_type: str = Field(..., pattern="^(dine_in|delivery)$")
+    table_number: str | None = None
+    delivery_address: str | None = None
+
 # Schema for responding with selection items
 class SelectionItemResponse(BaseModel):
     id: int
@@ -40,6 +45,9 @@ class SelectionResponse(BaseModel):
     items: list[SelectionItemResponse] = Field(default_factory=list)
     created_at: datetime
     finalized_at: datetime | None
+    order_type: str | None = None
+    table_number: str | None = None
+    delivery_address: str | None = None
 
     # Computed field for the total price of the selection
     @computed_field

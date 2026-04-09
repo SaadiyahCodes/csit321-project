@@ -1,7 +1,7 @@
 // src/routes/customer/MenuPage.jsx
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ShoppingCart, ArrowLeft, MessageCircle } from "lucide-react";
+import { ShoppingCart, ArrowLeft, MessageCircle, ShieldCheck, ShieldOff } from "lucide-react";
 import CategoryBar from "../../components/CategoryBar";
 import MenuCard from "../../components/MenuCard";
 import DishBottomSheet from "../../components/DishBottomSheet";
@@ -32,6 +32,7 @@ export default function MenuPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [profileFilterEnabled, setProfileFilterEnabled] = useState(true);
 
   // { [menu_item_id]: { qty, selectionItemId } }
   const [localCart, setLocalCart] = useState({});
@@ -49,7 +50,7 @@ export default function MenuPage() {
   }, []);
 
   const getProfileConflicts = (item) => {
-    if (!profile) return [];
+    if (!profile || !profileFilterEnabled) return [];
     const conflicts = [];
 
     const itemAllergens = (item.allergens || []).map(a => a.toLowerCase());
@@ -253,6 +254,29 @@ export default function MenuPage() {
                 </span>
               )}
             </button>
+            {customer && (profile?.allergens?.length > 0 || profile?.dietary_preferences?.length > 0) && (
+              <button
+                onClick={() => setProfileFilterEnabled(prev => !prev)}
+                title={profileFilterEnabled
+                  ? "Allergen & dietary filters ON — click to disable"
+                  : "Allergen & dietary filters OFF — click to enable"}
+                style={{
+                  width: 40, height: 40, borderRadius: "50%",
+                  background: profileFilterEnabled ? "#fff7ed" : "#f3f4f6",
+                  border: `1.5px solid ${profileFilterEnabled ? "#f97316" : "#d1d5db"}`,
+                  cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.2s", flexShrink: 0,
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = profileFilterEnabled ? "#fed7aa" : "#e5e7eb"}
+                onMouseLeave={e => e.currentTarget.style.background = profileFilterEnabled ? "#fff7ed" : "#f3f4f6"}
+              >
+                {profileFilterEnabled
+                  ? <ShieldCheck size={22} color="#f97316" />
+                  : <ShieldOff size={22} color="#9ca3af" />
+                }
+              </button>
+            )}
           </div>
         </div>
       </nav>

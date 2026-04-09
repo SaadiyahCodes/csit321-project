@@ -1,6 +1,6 @@
 // src/routes/customer/OrderSummaryPage.jsx
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, CheckCircle, Hash } from "lucide-react";
 import TranslatedText from "../../components/TranslatedText";
 import LanguageSelector from "../../components/LanguageSelector";
@@ -102,12 +102,31 @@ export default function OrderSummaryPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const location = useLocation();
+
   const finalizeOrder = async () => {
     setFinalizing(true);
     try {
+      // Get order details from navigation state
+      const { orderType, tableNumber, deliveryAddress } = location.state || {};
+      
+      if (!orderType) {
+        showToast(tSync("Missing order details. Please try again."), "error");
+        navigate(`/restaurant/${restaurantId}/cart`);
+        return;
+      }
+
+      const finalizeData = {
+        order_type: orderType,
+        table_number: tableNumber,
+        delivery_address: deliveryAddress,
+      };
+
       const response = await api.post(
-        `/api/selections/${selectionId}/finalize?session_id=${sessionId}`
+        `/api/selections/${selectionId}/finalize?session_id=${sessionId}`,
+        finalizeData
       );
+      
       setOrderData(response.data);
       setLoading(false);
       // Clear the session so a fresh selection is created when returning to menu

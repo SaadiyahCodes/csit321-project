@@ -21,7 +21,10 @@ class Selection(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     finalized_at = Column(DateTime(timezone=True), nullable=True)
     redeemed_at = Column(DateTime, nullable=True)
-
+    order_type = Column(String(20), nullable=True)  # "dine_in" or "delivery"
+    table_number = Column(String(50), nullable=True)
+    delivery_address = Column(Text, nullable=True)
+    
     # Relationships
     session = relationship("CustomerSession", back_populates="selections")
     restaurant = relationship("Restaurant")

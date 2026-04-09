@@ -54,14 +54,14 @@ async def get_ai_summary(request: AISummaryRequest):
 
     prompt = f"""You are an analytics assistant for Gusto, a restaurant AI ordering platform.
 
-You will be given restaurant analytics data. Your job is to surface ONE non-obvious insight the restaurant owner would not immediately read from looking at the charts themselves.
+You will be given restaurant analytics data. Your job is to surface ONE non-obvious insight based on patterns in the data.
 
-Do not restate numbers they can already see. Instead, find a pattern, correlation, or implication — for example: a mismatch between what customers ask about and what gets ordered, an AOV gap that suggests a pricing opportunity, or a language distribution that suggests an untapped customer segment.
+Do not just restate numbers they can already see. Instead, find a pattern, correlation, or implication — for example: questions asked vs items ordered, language distribution vs conversion.
 
 Respond with exactly 2 sections separated by ||BREAK||
 
-INSIGHT: One sharp observation in 2 sentences max. Be specific and data-driven.
-ACTION: One concrete thing the restaurant can do about it, in 1 sentence.
+INSIGHT: One data-driven observation in 2 sentences max. Be specific and include relevant numbers from the data.
+ACTION: One improvement suggestion for the restaurant, in 1 sentence.
 
 No markdown, no bullet points, no asterisks, no bold. Plain sentences only.
 

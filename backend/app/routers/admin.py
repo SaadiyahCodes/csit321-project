@@ -6,8 +6,10 @@ from app.models import User
 from app.db.database import get_db
 from app.schemas.restaurant import RestaurantResponse, RestaurantUpdate
 from app.schemas.menu import MenuItemResponse, MenuItemCreate, MenuItemUpdate
+from app.schemas.selection import SelectionResponse
 from app.crud import restaurant as restaurant_crud
 from app.crud import menu as menu_crud
+from app.crud import order_history as order_history_crud
 from app.services.chatbot_service import chatbot_service
 
 # AR Model Validator
@@ -146,3 +148,14 @@ def delete_my_menu_item(
         )
     chatbot_service.invalidate_menu_cache(current_user.restaurant_id)
     return {"message": "Menu item deleted successfully"}
+
+# Restaurant order history
+@router.get("/orders", response_model=list[SelectionResponse])
+def get_restaurant_order_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_user)
+):
+    #Get all orders for the admin's restaurant, latest first
+    if not current_user.restaurant_id:
+        raise HTTPException(status_code=400, detail="No restaurant associated with this admin")
+    return order_history_crud.get_restaurant_order_history(db, current_user.restaurant_id)

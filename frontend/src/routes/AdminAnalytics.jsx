@@ -309,7 +309,8 @@ function TopMenuItems({ data }) {
   if (!data || data.length === 0) {
     return <EmptyState label="No orders yet in this period" />;
   }
-
+  
+  const navigate = useNavigate();
   const maxOrders = Math.max(...data.map(d => d.total_orders), 1);
 
   return (
@@ -373,6 +374,7 @@ function TopMenuItems({ data }) {
               </span>
             )}
           </span>
+        
 
           {/* Chatbot % badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -438,9 +440,10 @@ function Panel({ title, children, style }) {
   );
 }
 
-function KPICard({ title, value, subtitle, icon, accent }) {
+function KPICard({ title, value, subtitle, icon, accent, onClick }) {
   return (
     <div
+      onClick={onClick}
       style={{
         background: '#fff',
         border: '1px solid #F3F4F6',
@@ -448,7 +451,7 @@ function KPICard({ title, value, subtitle, icon, accent }) {
         padding: '20px 20px 18px',
         boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
         transition: 'transform 0.15s, box-shadow 0.15s',
-        cursor: 'default',
+        cursor: onClick ? 'pointer' : 'default',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -679,7 +682,7 @@ export default function AdminAnalytics() {
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             <KPICard title="Total Conversations" value={data?.kpi?.total_conversations || 0} icon="💬" accent="#F97316" />
-            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} icon="🛒" accent="#EA580C" />
+            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} icon="🛒" accent="#EA580C" onClick={() => navigate('/admin/orders')}/>
             <KPICard title="Conversion Rate" value={`${data?.kpi?.conversion_rate || 0}%`} icon="📈" accent="#F59E0B" />
             <div style={{ position: 'relative' }}>
               <KPICard

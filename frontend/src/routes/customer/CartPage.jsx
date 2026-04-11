@@ -23,6 +23,7 @@ export default function CartPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [navScrolled, setNavScrolled] = useState(false);
   const [activeNav, setActiveNav] = useState("cart");
+  const [orderType, setOrderType] = useState("dine_in"); // "dine_in" or "delivery"
   const [tableNumber, setTableNumber] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
 
@@ -130,7 +131,26 @@ export default function CartPage() {
     }
   };
 
-  const handleCheckout = () => navigate(`/restaurant/${restaurantId}/order-summary`);
+  const handleCheckout = async () => {
+    // Validation
+    if (orderType === "dine_in" && !tableNumber.trim()) {
+      showToast(tSync("Please enter a table number"), "error");
+      return;
+    }
+    if (orderType === "delivery" && !deliveryAddress.trim()) {
+      showToast(tSync("Please enter a delivery address"), "error");
+      return;
+    }
+
+    // Navigate with order details in state (don't finalize yet)
+    navigate(`/restaurant/${restaurantId}/order-summary`, {
+      state: {
+        orderType,
+        tableNumber: orderType === "dine_in" ? tableNumber : null,
+        deliveryAddress: orderType === "delivery" ? deliveryAddress : null,
+      }
+    });
+  };
 
   // ── Navbar ──
   const Navbar = () => (
@@ -218,7 +238,7 @@ export default function CartPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 110 }}>
+    <div dir="ltr" style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 110 }}>
       <Navbar />
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px 20px 0" }}>
@@ -376,59 +396,91 @@ export default function CartPage() {
           background: "white", borderRadius: 24,
           boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
           padding: "20px", marginBottom: 16,
-          display: "flex", flexDirection: "column", gap: 14,
         }}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111", margin: 0 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111", marginBottom: 16 }}>
             <TranslatedText>Dining Details</TranslatedText>
           </h2>
 
-          <div>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
-              <TranslatedText>Table Number</TranslatedText>
-              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 4 }}>
-                (<TranslatedText>optional</TranslatedText>)
-              </span>
-            </label>
-            <input
-              type="text"
-              value={tableNumber}
-              onChange={e => setTableNumber(e.target.value)}
-              placeholder={tSync("e.g. Table 7")}
+          {/* Order Type Toggle */}
+          <div style={{
+            display: "flex", gap: 10, marginBottom: 16,
+            background: "#fafaf8", borderRadius: 12, padding: 4,
+          }}>
+            <button
+              onClick={() => setOrderType("dine_in")}
               style={{
-                width: "100%", boxSizing: "border-box",
-                padding: "11px 14px", borderRadius: 12, fontSize: 15,
-                border: "1.5px solid #e5e7eb", outline: "none",
-                fontFamily: "inherit", color: "#111",
+                flex: 1, padding: "10px 0", borderRadius: 8,
+                border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
+                background: orderType === "dine_in" ? "white" : "transparent",
+                color: orderType === "dine_in" ? "#f97316" : "#6b7280",
+                boxShadow: orderType === "dine_in" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                transition: "all 0.2s ease",
               }}
-              onFocus={e => e.target.style.borderColor = "#f97316"}
-              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-            />
+            >
+              <TranslatedText>Dine In</TranslatedText>
+            </button>
+            <button
+              onClick={() => setOrderType("delivery")}
+              style={{
+                flex: 1, padding: "10px 0", borderRadius: 8,
+                border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700,
+                background: orderType === "delivery" ? "white" : "transparent",
+                color: orderType === "delivery" ? "#f97316" : "#6b7280",
+                boxShadow: orderType === "delivery" ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                transition: "all 0.2s ease",
+              }}
+            >
+              <TranslatedText>Delivery</TranslatedText>
+            </button>
           </div>
 
-          <div>
-            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
-              <MapPin size={14} color="#f97316" />
-              <TranslatedText>Delivery Address</TranslatedText>
-              <span style={{ fontWeight: 400, color: "#9ca3af", marginLeft: 2 }}>
-                (<TranslatedText>optional</TranslatedText>)
-              </span>
-            </label>
-            <textarea
-              value={deliveryAddress}
-              onChange={e => setDeliveryAddress(e.target.value)}
-              placeholder={tSync("Enter delivery address if applicable...")}
-              rows={2}
-              style={{
-                width: "100%", boxSizing: "border-box",
-                padding: "11px 14px", borderRadius: 12, fontSize: 15,
-                border: "1.5px solid #e5e7eb", outline: "none",
-                resize: "none", fontFamily: "inherit", color: "#111",
-              }}
-              onFocus={e => e.target.style.borderColor = "#f97316"}
-              onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-            />
-          </div>
+          {/* Conditional Input */}
+          {orderType === "dine_in" ? (
+            <div>
+              <label style={{ display: "block", fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+                <TranslatedText>Table Number</TranslatedText>
+                <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={tableNumber}
+                onChange={e => setTableNumber(e.target.value)}
+                placeholder={tSync("e.g. Table 7")}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "11px 14px", borderRadius: 12, fontSize: 15,
+                  border: "1.5px solid #e5e7eb", outline: "none",
+                  fontFamily: "inherit", color: "#111",
+                }}
+                onFocus={e => e.target.style.borderColor = "#f97316"}
+                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+              />
+            </div>
+          ) : (
+            <div>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+                <MapPin size={14} color="#f97316" />
+                <TranslatedText>Delivery Address</TranslatedText>
+                <span style={{ color: "#ef4444", marginLeft: 2 }}>*</span>
+              </label>
+              <textarea
+                value={deliveryAddress}
+                onChange={e => setDeliveryAddress(e.target.value)}
+                placeholder={tSync("Enter your delivery address...")}
+                rows={3}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  padding: "11px 14px", borderRadius: 12, fontSize: 15,
+                  border: "1.5px solid #e5e7eb", outline: "none",
+                  resize: "none", fontFamily: "inherit", color: "#111",
+                }}
+                onFocus={e => e.target.style.borderColor = "#f97316"}
+                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+              />
+            </div>
+          )}
         </div>
+        
       </div>
 
       {/* ── Fixed Checkout Button ── */}

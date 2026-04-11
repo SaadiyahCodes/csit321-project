@@ -5,7 +5,6 @@ import { Search, UtensilsCrossed, ChevronDown, ChevronLeft, ChevronRight, Sparkl
 import RestaurantCard from "../../components/RestaurantCard";
 import LanguageSelector from "../../components/LanguageSelector";
 import TranslatedText from "../../components/TranslatedText";
-import FoodCursor from "../../components/FoodCursor";
 import ParticleBackground from "../../components/ParticleBackground";
 import Reveal from "../../components/Reveal";
 import LandingChatbot from "../../components/ChatbotLanding";
@@ -26,6 +25,7 @@ import aboutChatbot from "../../assets/about-chatbot.png";
 // ── Top Navbar ────────────────────────────────────────────────────────────────
 function TopNav({ customer }) {
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,18 +70,70 @@ function TopNav({ customer }) {
           }}
         />
 
-        {/* Links */}
+        {/* Desktop Links - hidden on mobile */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "nowrap" }}>
-          <NavLink label="Restaurants" scrolled={scrolled} onClick={() => scrollTo("restaurants")} />
-          <NavLink label="About"       scrolled={scrolled} onClick={() => scrollTo("about")} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Hamburger - visible only on mobile */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{
+                display: "none",
+                background: scrolled 
+                  ? "rgba(249, 115, 22, 0.08)" 
+                  : "rgba(255, 255, 255, 0.12)",
+                border: scrolled 
+                  ? "1.5px solid rgba(249, 115, 22, 0.2)" 
+                  : "1.5px solid rgba(255, 255, 255, 0.25)",
+                borderRadius: "10px",
+                cursor: "pointer",
+                padding: "6px 9px",
+                color: scrolled ? "#f97316" : "white",
+                transition: "all 0.3s ease",
+                backdropFilter: "blur(8px)",
+              }}
+              className="mobile-hamburger"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = scrolled 
+                  ? "rgba(249, 115, 22, 0.15)" 
+                  : "rgba(255, 255, 255, 0.2)";
+                e.currentTarget.style.transform = "scale(1.05)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = scrolled 
+                  ? "rgba(249, 115, 22, 0.08)" 
+                  : "rgba(255, 255, 255, 0.12)";
+                e.currentTarget.style.transform = "scale(1)";
+              }}
+            >
+              <svg 
+                width="20" 
+                height="20" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+
+            {/* Desktop nav links */}
+            <div className="desktop-nav-links" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <NavLink label="Restaurants" scrolled={scrolled} onClick={() => scrollTo("restaurants")} />
+              <NavLink label="About" scrolled={scrolled} onClick={() => scrollTo("about")} />
+            </div>
+          </div>
 
           <div style={{
             width: 1, height: 20,
             background: scrolled ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.3)",
             margin: "0 4px", flexShrink: 0,
-          }} />
+          }} className="desktop-nav-links" />
 
-          {/* Language selector mirrors the Login button style */}
+          {/* Language selector and Login - always visible */}
           <LanguageSelector variant="landing-nav" scrolled={scrolled} />
 
           <button
@@ -104,7 +156,87 @@ function TopNav({ customer }) {
             {customer ? customer.name.split(" ")[0] : "Login"}
           </button>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              background: "rgba(255, 255, 255, 0.98)",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+              borderTop: "1px solid rgba(249, 115, 22, 0.1)",
+              zIndex: 999,
+              animation: "slideDown 0.3s ease",
+            }}
+            className="mobile-menu"
+          >
+            <button
+              onClick={() => { scrollTo("restaurants"); setMobileMenuOpen(false); }}
+              style={{
+                width: "100%",
+                padding: "16px 24px",
+                background: "none",
+                border: "none",
+                textAlign: "left",
+                fontSize: 15,
+                fontWeight: 600,
+                color: "#374151",
+                cursor: "pointer",
+                borderBottom: "1px solid rgba(0,0,0,0.06)",
+                transition: "background 0.2s ease",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(249, 115, 22, 0.05)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              Restaurants
+            </button>
+            <button
+              onClick={() => { scrollTo("about"); setMobileMenuOpen(false); }}
+              style={{
+                width: "100%",
+                padding: "16px 24px",
+                background: "none",
+                border: "none",
+                textAlign: "left",
+                fontSize: 15,
+                fontWeight: 600,
+                color: "#374151",
+                cursor: "pointer",
+                transition: "background 0.2s ease",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(249, 115, 22, 0.05)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+            >
+              About
+            </button>
+          </div>
+        )}
       </div>
+      <style>{`
+        @media (max-width: 640px) {
+          .desktop-nav-links {
+            display: none !important;
+          }
+          .mobile-hamburger {
+            display: block !important;
+          }
+        }
+        
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </nav>
   );
 }
@@ -134,10 +266,10 @@ function NavLink({ label, scrolled, onClick }) {
 
 // ── Floating Food Cards ───────────────────────────────────────────────────────
 const FOOD_CARDS = [
-  { img: heroImg1, left: "2%",  top: "20%", rotate: -11, floatDir:  1 },
-  { img: heroImg2, left: "10%", top: "52%", rotate:   6, floatDir: -1 },
-  { img: heroImg3, left: "70%", top: "20%", rotate:  -5, floatDir:  1 },
-  { img: heroImg4, left: "80%", top: "52%", rotate:   9, floatDir: -1 },
+  { img: heroImg1, left: "2%",  top: "20%", rotate: -11, floatDir:  1, mobileLeft: "5%", mobileTop: "15%", showOnMobile: true },
+  { img: heroImg2, left: "10%", top: "52%", rotate:   6, floatDir: -1, showOnMobile: false },
+  { img: heroImg3, left: "70%", top: "20%", rotate:  -5, floatDir:  1, showOnMobile: false },
+  { img: heroImg4, left: "80%", top: "52%", rotate:   9, floatDir: -1, mobileLeft: "55%", mobileTop: "55%", showOnMobile: true },
 ];
 
 function FoodCard({ card, index }) {
@@ -210,14 +342,16 @@ function FoodCard({ card, index }) {
       `}</style>
       <div
         ref={cardRef}
+        data-card-index={index}
         onMouseDown={e => { e.preventDefault(); onDown(e.clientX, e.clientY); }}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         onTouchStart={e => onDown(e.touches[0].clientX, e.touches[0].clientY)}
+        className={card.showOnMobile ? "food-card" : "food-card hide-on-mobile"}
         style={{
           position: "absolute",
-          left: card.left,
-          top: card.top,
+          left: `var(--card-left, ${card.left})`,
+          top: `var(--card-top, ${card.top})`,
           transform: `
             translate(${pos.x}px, ${pos.y}px)
             rotate(${card.rotate}deg)
@@ -253,6 +387,7 @@ function FoodCard({ card, index }) {
               pointerEvents: "none",
               filter: "drop-shadow(0 4px 10px rgba(0,0,0,0.18))",
             }}
+            className="food-card-img"
           />
         </div>
       </div>
@@ -331,6 +466,30 @@ function Hero({ onScrollDown }) {
       <style>{`
         @keyframes heroFadeIn { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
         @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+        
+        @media (max-width: 768px) {
+          .hide-on-mobile {
+            display: none !important;
+          }
+          
+          /* Make all visible cards the same size on mobile */
+          .food-card-img {
+            width: 240px !important;
+            max-width: 40vw !important;
+          }
+          
+          /* Reposition cards on mobile using data attributes */
+          .food-card[data-card-index="0"] {
+            left: 5% !important;
+            top: 15% !important;
+          }
+          
+          .food-card[data-card-index="3"] {
+            left: auto !important;
+            right: 5% !important;
+            top: 55% !important;
+          }
+        }
       `}</style>
     </section>
   );
@@ -438,11 +597,11 @@ function AboutSection() {
               <Sparkles size={18} color="white" />
             </div>
             <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#111", margin: 0 }}>
-              About Gusto
+              <TranslatedText>About Gusto</TranslatedText>
             </h2>
           </div>
           <p style={{ fontSize: 16, color: "#93851e", margin: 10 }}>
-            Features that make every meal <strong>safer</strong>, <strong>easier</strong>, and more <strong>delicious</strong>.
+            <TranslatedText>Features that make every meal <strong>safer</strong>, <strong>easier</strong>, and more <strong>delicious</strong>.</TranslatedText>
           </p>
         </div>
       </Reveal>
@@ -478,11 +637,11 @@ function AboutSection() {
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
                     {f.subtitle && (
                       <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>
-                        {f.subtitle}
+                        <TranslatedText>{f.subtitle}</TranslatedText>
                       </p>
                     )}
                     <h3 style={{ margin: 0, fontSize: "clamp(16px,2.5vw,21px)", fontWeight: 800, color: "#111" }}>
-                      {f.title}
+                      <TranslatedText>{f.title}</TranslatedText>
                     </h3>
                   </div>
 
@@ -495,7 +654,7 @@ function AboutSection() {
                     {/* Right: description vertically centered */}
                     <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
                       <p style={{ fontSize: 14, color: "#000000", lineHeight: 2, margin: 0 }}>
-                        {f.description}
+                        <TranslatedText>{f.description}</TranslatedText>
                       </p>
                     </div>
                   </div>

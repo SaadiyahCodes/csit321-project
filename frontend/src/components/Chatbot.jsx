@@ -8,6 +8,7 @@ import LanguageSelector from "./LanguageSelector";
 import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "./Toast";
+import HandsFreeMode from "./HandsFreeMode";
 
 export default function Chatbot({ isOpen, onClose }) {
   const { customer, profile } = useCustomerAuth();
@@ -26,6 +27,9 @@ export default function Chatbot({ isOpen, onClose }) {
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
     () => localStorage.getItem("voiceReplyEnabled") === "true"
   );
+
+  // Hands Free
+  const [handsFreeMode, setHandsFreeMode] = useState(false);
 
   // Voice Recording
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -406,6 +410,23 @@ export default function Chatbot({ isOpen, onClose }) {
               }
             </button>
 
+            {/* Hands Free button */}
+            <button
+              onClick={() => setHandsFreeMode(true)}
+              style={{
+                background: '#4CAF50',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: '600'
+              }}
+            >
+              ♿ Hands-Free
+            </button>
+
             <button
               onClick={onClose}
               style={{
@@ -469,7 +490,7 @@ export default function Chatbot({ isOpen, onClose }) {
                   Dietary preferences: {profile.dietary_preferences.join(", ")}
                 </p>
               )}
-              
+
             </div>
           )}
 
@@ -515,27 +536,27 @@ export default function Chatbot({ isOpen, onClose }) {
                   {language === "ar"
                     ? "مرحباً! أنا مساعدك الذكي"
                     : language === "ur"
-                    ? "ہیلو! میں آپ کا AI اسسٹنٹ ہوں"
-                    : language === "hi"
-                    ? "नमस्ते! मैं आपका AI सहायक हूं"
-                    : language === "es"
-                    ? "¡Hola! Soy tu asistente de AI"
-                    : language === "fr"
-                    ? "Bonjour! Je suis votre assistant AI"
-                    : "Hi! I'm your AI assistant"}
+                      ? "ہیلو! میں آپ کا AI اسسٹنٹ ہوں"
+                      : language === "hi"
+                        ? "नमस्ते! मैं आपका AI सहायक हूं"
+                        : language === "es"
+                          ? "¡Hola! Soy tu asistente de AI"
+                          : language === "fr"
+                            ? "Bonjour! Je suis votre assistant AI"
+                            : "Hi! I'm your AI assistant"}
                 </p>
                 <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
                   {language === "ar"
                     ? "اسألني عن الأطباق أو المكونات أو الحساسية!"
                     : language === "ur"
-                    ? "مجھ سے ڈشز، اجزاء یا الرجی کے بارے میں پوچھیں!"
-                    : language === "hi"
-                    ? "मुझसे व्यंजन, सामग्री या एलर्जी के बारे में पूछें!"
-                    : language === "es"
-                    ? "¡Pregúntame sobre platos, ingredientes o alergias!"
-                    : language === "fr"
-                    ? "Demandez-moi des plats, ingrédients ou allergies !"
-                    : "Ask me about dishes, ingredients, or allergies!"}
+                      ? "مجھ سے ڈشز، اجزاء یا الرجی کے بارے میں پوچھیں!"
+                      : language === "hi"
+                        ? "मुझसे व्यंजन, सामग्री या एलर्जी के बारे में पूछें!"
+                        : language === "es"
+                          ? "¡Pregúntame sobre platos, ingredientes o alergias!"
+                          : language === "fr"
+                            ? "Demandez-moi des plats, ingrédients ou allergies !"
+                            : "Ask me about dishes, ingredients, or allergies!"}
                 </p>
               </div>
             </div>
@@ -557,8 +578,8 @@ export default function Chatbot({ isOpen, onClose }) {
                     msg.sender === "user"
                       ? "none"
                       : msg.isError
-                      ? "1px solid #fca5a5"
-                      : "1px solid #e5e7eb",
+                        ? "1px solid #fca5a5"
+                        : "1px solid #e5e7eb",
                   borderRadius:
                     msg.sender === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
                   padding: "12px 14px",
@@ -672,14 +693,14 @@ export default function Chatbot({ isOpen, onClose }) {
                 language === "ar"
                   ? "اسألني أي شيء..."
                   : language === "ur"
-                  ? "مجھ سے کچھ بھی پوچھیں..."
-                  : language === "hi"
-                  ? "मुझसे कुछ भी पूछें..."
-                  : language === "es"
-                  ? "Pregúntame lo que quieras..."
-                  : language === "fr"
-                  ? "Demandez-moi ce que vous voulez..."
-                  : "Ask me anything..."
+                    ? "مجھ سے کچھ بھی پوچھیں..."
+                    : language === "hi"
+                      ? "मुझसे कुछ भी पूछें..."
+                      : language === "es"
+                        ? "Pregúntame lo que quieras..."
+                        : language === "fr"
+                          ? "Demandez-moi ce que vous voulez..."
+                          : "Ask me anything..."
               }
               disabled={isSending || isRecording}
               style={{
@@ -762,17 +783,23 @@ export default function Chatbot({ isOpen, onClose }) {
               }} />
               <p style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, margin: 0 }}>
                 {language === "ar" ? "جاري التسجيل... انقر على الميكروفون للإيقاف"
-                : language === "ur" ? "ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں"
-                : language === "hi" ? "रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें"
-                : language === "es" ? "Grabando... Haz clic en el micrófono para detener"
-                : language === "fr" ? "Enregistrement... Cliquez sur le micro pour arrêter"
-                : "Recording — tap mic to stop"}
+                  : language === "ur" ? "ریکارڈنگ... رکنے کے لیے مائیک پر کلک کریں"
+                    : language === "hi" ? "रिकॉर्डिंग... रुकने के लिए माइक पर क्लिक करें"
+                      : language === "es" ? "Grabando... Haz clic en el micrófono para detener"
+                        : language === "fr" ? "Enregistrement... Cliquez sur le micro pour arrêter"
+                          : "Recording — tap mic to stop"}
               </p>
             </div>
           )}
         </div>
       </div>
       {ToastContainer}
+      {handsFreeMode && (
+        <HandsFreeMode
+          sessionId={sessionId}  // ← Restaurant session, not landing!
+          onExit={() => setHandsFreeMode(false)}
+        />
+      )}
     </>
   );
 }

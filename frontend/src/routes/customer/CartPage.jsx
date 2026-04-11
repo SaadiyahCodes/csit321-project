@@ -238,7 +238,7 @@ export default function CartPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 110 }}>
+    <div dir="ltr" style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 110 }}>
       <Navbar />
 
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "20px 20px 0" }}>

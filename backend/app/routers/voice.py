@@ -41,7 +41,8 @@ def text_to_speech(text: str, language: str = "en"):
     return result
 
 class VoiceChatRequest(BaseModel):
-    audio_base64: str
+    audio_base64: Optional[str] = None
+    text: Optional[str] = None
     session_id: str
     language: str = "en"
     allergies: Optional[List[str]] = None
@@ -65,18 +66,27 @@ async def voice_chat(request: VoiceChatRequest, db: Session = Depends(get_db),
                 merged_allergies = list(set(merged_allergies + (profile.allergens or [])))
                 merged_dietary = list(profile.dietary_preferences or [])
 
-        # ===== 1. SPEECH TO TEXT =====
-        audio_data = base64.b64decode(request.audio_base64)
-        stt_result = voice_service.speech_to_text(audio_data, request.language)
-        
-        if not stt_result.get('success'):
-            return {
-                "error": "Speech recognition failed",
-                "details": stt_result,
-                "success": False
-            }
-        
-        user_text = stt_result['text']
+        # ===== 1. GET USER TEXT =====
+        if request.audio_base64:
+            audio_data = base64.b64decode(request.audio_base64)
+            stt_result = voice_service.speech_to_text(
+                audio_data,
+                request.language
+            )
+            if not stt_result.get('success'):
+                return {
+                    "error": "Speech recognition failed",
+                    "details": stt_result,
+                    "success": False
+                }
+            user_text = stt_result['text']
+        elif request.text:
+            user_text = request.text
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="No input provided"
+            )
         print(f"🎤 User said ({request.language}): {user_text}")
         
         # ===== 2. PROCESS CHAT (shared logic!) =====

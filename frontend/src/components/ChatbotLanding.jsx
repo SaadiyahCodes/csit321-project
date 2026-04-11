@@ -22,7 +22,6 @@ export default function LandingChatbot({ isOpen, onClose }) {
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
     () => localStorage.getItem("voiceReplyEnabled") === "true"
   );
-  const [handsFreeMode, setHandsFreeMode] = useState(false);
 
   // Voice Recording
   const [mediaRecorder, setMediaRecorder] = useState(null);
@@ -367,43 +366,6 @@ export default function LandingChatbot({ isOpen, onClose }) {
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <LanguageSelector variant="compact" />
 
-            {/* HANDS-FREE BUTTON - FIXED */}
-            <button
-              onClick={() => {
-                console.log("🎤 Opening Hands-Free Mode");
-                setHandsFreeMode(true);
-              }}
-              title="Accessibility Mode - Hands-Free Ordering"
-              style={{
-                background: "rgba(76, 175, 80, 0.9)",
-                border: "1px solid rgba(255,255,255,0.4)",
-                borderRadius: "8px",
-                padding: "6px 12px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "6px",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                fontSize: "11px",
-                fontWeight: "600",
-                color: "white",
-                position: "relative",
-                zIndex: 100,
-                pointerEvents: "auto",
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(76, 175, 80, 1)";
-                e.currentTarget.style.transform = "scale(1.05)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(76, 175, 80, 0.9)";
-                e.currentTarget.style.transform = "scale(1)";
-              }}
-            >
-              ♿ Hands-Free
-            </button>
 
             {/* Voice Reply Toggle */}
             <button
@@ -780,13 +742,6 @@ export default function LandingChatbot({ isOpen, onClose }) {
           )}
         </div>
       </div>
-      {/* ===== NEW: HANDS-FREE MODE ===== */}
-      {handsFreeMode && (
-        <HandsFreeMode
-          sessionId={conversationIdRef.current}
-          onExit={() => setHandsFreeMode(false)}
-        />
-      )}
     </>
   );
 }

@@ -165,6 +165,9 @@ def finalize_order(
         item_count=response.item_count,
         finalized_at=selection.finalized_at,
         items=response.items,
+        order_type=response.order_type,
+        table_number=response.table_number,
+        delivery_address=response.delivery_address
     )
 
 

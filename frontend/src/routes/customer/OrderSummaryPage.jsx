@@ -1,7 +1,7 @@
 // src/routes/customer/OrderSummaryPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Hash } from "lucide-react";
+import { ArrowLeft, CheckCircle, Hash, CookingPot, Motorbike, ChefHat, ChefHatIcon, MotorbikeIcon } from "lucide-react";
 import TranslatedText from "../../components/TranslatedText";
 import LanguageSelector from "../../components/LanguageSelector";
 import { useSession } from "../../context/SessionContext";
@@ -81,6 +81,7 @@ export default function OrderSummaryPage() {
   const { sessionId, selectionId, restaurantId, refreshSelection } = useSession();
   const { tSync } = useLanguage();
   const { showToast, ToastContainer } = useToast();
+  const location = useLocation();
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [finalizing, setFinalizing] = useState(false);
@@ -88,6 +89,7 @@ export default function OrderSummaryPage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [checkVisible, setCheckVisible] = useState(false);
   const hasFinalizedRef = useRef(false);
+  const { orderType, tableNumber, deliveryAddress } = location.state || {};
 
   useEffect(() => {
     if (selectionId && sessionId && !hasFinalizedRef.current) {
@@ -101,8 +103,6 @@ export default function OrderSummaryPage() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const location = useLocation();
 
   const finalizeOrder = async () => {
     setFinalizing(true);
@@ -225,7 +225,7 @@ export default function OrderSummaryPage() {
   if (!orderData) return null;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 40 }}>
+    <div dir="ltr" style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 40 }}>
       {showConfetti && <Confetti />}
       <Navbar />
 
@@ -280,6 +280,35 @@ export default function OrderSummaryPage() {
           </div>
         </div>
 
+        {/* ── Order Type Details ── */}
+        {orderType && (
+          <div style={{
+            background: "white", borderRadius: 24,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+            padding: "24px 20px", marginBottom: 16,
+            display: "flex", flexDirection: "column", alignItems: "center",
+            gap: 12, textAlign: "center",
+          }}>
+            <div style={{
+              background: "#fff7ed", borderRadius: "50%",
+              width: 64, height: 64,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {orderType === "dine_in"
+                ? <ChefHat size={32} color="#f97316" />
+                : <Motorbike size={32} color="#f97316" />}
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 13, color: "#9ca3af", fontWeight: 500 }}>
+                <TranslatedText>{orderType === "dine_in" ? "Dine In" : "Delivery"}</TranslatedText>
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: 17, fontWeight: 800, color: "#111" }}>
+                {orderType === "dine_in" ? tableNumber : deliveryAddress}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ── Itemized list ── */}
         <div style={{
           background: "white", borderRadius: 24,
@@ -295,28 +324,22 @@ export default function OrderSummaryPage() {
             const isLast = idx === (orderData.items.length - 1);
             return (
               <div key={item.id ?? idx} style={{
-                display: "flex", alignItems: "center",
+                display: "flex", alignItems: "flex-start",
                 justifyContent: "space-between", gap: 12,
                 padding: "12px 20px",
                 borderTop: "1px solid #f3f4f6",
-                borderBottom: isLast ? "none" : undefined,
               }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{
-                    background: "#fff7ed", color: "#f97316",
-                    fontWeight: 800, fontSize: 13,
-                    width: 28, height: 28, borderRadius: "50%",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    {item.quantity}
-                  </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#111" }}>
                     {item.menu_item?.name ?? item.name}
+                    <span style={{ color: "#9ca3af", fontWeight: 500, marginLeft: 6 }}>× {item.quantity}</span>
                   </span>
+                  {item.notes && (
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>📝 {item.notes}</span>
+                  )}
                 </div>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#111", flexShrink: 0 }}>
-                  {(item.item_total ?? (item.menu_item?.price * item.quantity))?.toFixed(2)} AED
+                  {item.item_total?.toFixed(2)} AED
                 </span>
               </div>
             );

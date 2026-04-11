@@ -72,6 +72,9 @@ class SelectionFinalizeResponse(BaseModel):
     item_count: int
     finalized_at: datetime
     items: list[SelectionItemResponse] = Field(default_factory=list)
+    order_type: str | None = None
+    table_number: str | None = None
+    delivery_address: str | None = None
 
     class Config:
         from_attributes = True

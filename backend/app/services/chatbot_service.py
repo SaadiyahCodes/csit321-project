@@ -107,12 +107,26 @@ CRITICAL RULES:
 5. You are RECOMMENDING items, not adding them directly. Always ask for confirmation first.
 6. Pay attention to quantity ("2 burgers", "three fries") and customizations ("no onions", "extra cheese")
 7. NEVER set should_add: true on the first request. Always confirm first. Only set should_add: true when customer responds yes/sure/ok to YOUR confirmation question.
+8. CHECKOUT BEHAVIOR:
+- Never assume checkout intent unless user explicitly says "checkout", "pay now", or similar
+- When user confirms checkout, set:
+    intent = "order_confirmation"
+    should_add = false
+    items_to_add = []
+- If checkout is triggered, your response must clearly confirm order placement
+- After checkout, the conversation should end naturally (no further recommendations)
 
 CONVERSATION FLOW:
 - Customer asks about food -> Recommend suitable dishes
 - Customer shows interest -> Confirm: "Would you like to add [quantity] [dish] to your order?"
 - Customer confirms -> Say: "Perfect! Let me add that for you."
 - Continue conversation naturally
+After an item is successfully added to the cart:
+- Always ask the customer:
+  "Would you like to checkout or continue ordering?"
+- If the customer says "checkout", "yes", or similar → move to checkout flow
+- If the customer says "continue", "no", or similar → continue recommending items
+- Never auto-checkout unless explicitly confirmed by the user
 
 RESPONSE FORMAT:
 You MUST always respond with valid JSON in this exact format, no extra text outside the JSON:
@@ -139,6 +153,7 @@ FIELD RULES:
     "menu_inquiry" = customer asking questions, browsing
     "order_intent" = customer wants something but needs confirmation
     "order_confirmation" = customer confirmed a previous recommendation
+    "cart_review" = customer asking to view cart or after items are added
 - "should_add": true ONLY when customer has explicitly confirmed AND items_to_add is not empty
 - "items_to_add": ONLY items the customer confirmed they want. NEVER include rejected/allergen items here.
 - "quantity": integer, default 1. Extract from message ("2 burgers" -> 2, "three fries" -> 3)
@@ -177,6 +192,17 @@ Customer: "can I get a chicken sandwich with no pickles"
     "items_to_add": [{{"name": "Chicken Sandwich", "quantity": 1, "notes": "no pickles"}}],
     "items_rejected": [],
     "awaiting_confirmation": true
+}}
+
+EXAMPLE - Checkout flow:
+Customer: "checkout"
+-> {{
+    "response": "Perfect! Your order has been placed successfully. Thank you for ordering with us!",
+    "intent": "order_confirmation",
+    "should_add": false,
+    "items_to_add": [],
+    "items_rejected": [],
+    "awaiting_confirmation": false
 }}"""
 
     def extract_keywords_and_preferences(self, message: str) -> Dict:

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { X, Mic, MicOff, Volume2 } from 'lucide-react';
 import api from '../api';
+import { useCustomerAuth } from '../context/CustomerAuthContext';
 
 const HandsFreeMode = ({ sessionId, onExit }) => {
+    const { customer, profile } = useCustomerAuth();
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [language, setLanguage] = useState(null);
@@ -27,7 +30,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         if ('webkitSpeechRecognition' in window) {
             recognitionRef.current = new webkitSpeechRecognition();
             recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
+            recognitionRef.current.interimResults = true;
             recognitionRef.current.lang = 'en-US';
 
             recognitionRef.current.onresult = handleSpeechResult;
@@ -43,6 +46,23 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             }
         };
     }, []);
+
+    // Modify onExit to stop audio:
+    const handleExit = () => {
+        // Stop any playing audio
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        
+        // Stop speech recognition
+        if (recognitionRef.current) {
+            recognitionRef.current.abort();
+        }
+        
+        // Call parent's onExit
+        onExit();
+    };
 
     const speakText = async (text, lang = language || 'en') => {
         setIsSpeaking(true);
@@ -92,7 +112,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         try {
             isStartingRef.current = true;
 
-            recognitionRef.current.abort(); // 🔥 important reset safety
+            recognitionRef.current.abort(); // important reset safety
 
             setTimeout(() => {
                 try {
@@ -100,11 +120,18 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     setIsListening(true);
                     setTranscript('');
                     console.log("🎤 Started listening");
+
+                    setTimeout(() => {
+                        if (recognitionRef.current && isListening) {
+                            console.log("⏰ Manual timeout - stopping recognition");
+                            recognitionRef.current.stop();
+                        }
+                    }, 10000); // 10 seconds max listening time
                 } catch (err) {
                     console.error("Start failed:", err);
                     isStartingRef.current = false;
                 }
-            }, 400); // 🔥 IMPORTANT: 400ms delay stabilizes WebSpeech API
+            }, 400); // IMPORTANT: 400ms delay stabilizes WebSpeech API
 
         } catch (error) {
             console.error('Start error:', error);
@@ -115,16 +142,18 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
     const handleSpeechResult = (event) => {
         if (!statusRef.current) return;
-        const text = event.results[0][0].transcript.trim();
+        const lastResult = event.results[event.results.length - 1];
+        const text = lastResult[0].transcript.trim();
         setTranscript(text);
-        console.log('Heard:', text);
 
-        console.log('STATUS CHECK:', statusRef.current);
-
-        if (statusRef.current === 'language_select') {
-            handleLanguageSelection(text);
-        } else if (statusRef.current === 'active') {
-            handleUserCommand(text);
+        if (lastResult.isFinal) {
+            console.log('Final heard:', text);
+            
+            if (statusRef.current === 'language_select') {
+                handleLanguageSelection(text);
+            } else if (statusRef.current === 'active') {
+                handleUserCommand(text);
+            }
         }
     };
 
@@ -276,8 +305,6 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         try {
             if (lower_.includes('menu') || lower_.includes('मेन्यू') || lower_.includes('قائمة')) {
 
-                speakText("Here are some popular items.")
-
                 const res = await api.post('/api/voice/handsfree/menu', {
                     session_id: sessionId,
                     language: lang
@@ -319,6 +346,16 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     allergies: []
                 });
 
+                // ✅ CHECK FOR REJECTED ITEMS (allergen conflicts)
+                if (res.data.intent?.items_rejected?.length > 0) {
+                    const rejectedItems = res.data.intent.items_rejected.map(i => i.name).join(", ");
+                    speakText(
+                        `${res.data.bot_text} Note: I didn't recommend ${rejectedItems} due to your dietary restrictions.`,
+                        lang
+                    );
+                    return;
+                }
+
                 // CHECK FOR ALLERGENS FROM BACKEND
                 if (res.data.allergens && res.data.allergens.length > 0) {
                     pendingAllergenItemRef.current = res.data.item;
@@ -342,67 +379,322 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         }
     };
 
+    // Get current status message
+    const getStatusMessage = () => {
+        if (status === 'language_select') return 'Say your language...';
+        if (status === 'checkout_complete') return 'Order complete!';
+        if (isProcessing) return 'Processing...';
+        if (isSpeaking) return 'Speaking...';
+        if (isListening) return 'Listening...';
+        return 'Say menu to hear dishes, or tell me what you want';
+    };
+ 
+    const isProcessing = isLoading && !isSpeaking && !isListening;
+
     return (
-        <div style={{ ...styles.container, position: 'relative' }}>
-            {isLoading && (
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(249,115,22,0.1)', display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', zIndex: 1000, borderRadius: '10px'
-                }}>
-                    <div style={{
-                        width: '50px', height: '50px', border: '4px solid rgba(249,115,22,0.3)',
-                        borderTop: '4px solid #f97316', borderRadius: '50%', animation: 'spin 0.8s linear infinite'
-                    }} />
-                    <p style={{ marginTop: '16px', fontSize: '14px', color: '#f97316', fontWeight: '600' }}>
-                        {status === 'language_select' ? 'Starting...' : 'Processing...'}
-                    </p>
+        <>
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.8; transform: scale(1.05); }
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes ripple {
+                    0% { transform: scale(1); opacity: 0.6; }
+                    100% { transform: scale(1.5); opacity: 0; }
+                }
+                @keyframes slideUp {
+                    from { transform: translateY(20px); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            `}</style>
+ 
+            {/* Greyed Background Overlay */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                    zIndex: 9998,
+                    backdropFilter: 'blur(4px)',
+                }}
+            />
+ 
+            {/* Main Container */}
+            <div
+                style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 9999,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '20px',
+                    overflow: 'hidden',
+                }}
+            >
+                {/* Header - Top */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '20px',
+                        left: '20px',
+                        right: '20px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                    }}
+                >
+                    {/* Exit button - LEFT SIDE */}
+                    <button
+                        onClick={handleExit}
+                        style={{
+                            backgroundColor: '#ef4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '40px',
+                            height: '40px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(239,68,68,0.4)',
+                        }}
+                    >
+                        <X size={20} />
+                    </button>
+
+                    {/* Title badge - RIGHT SIDE */}
+                    <div
+                        style={{
+                            backgroundColor: 'rgba(255,255,255,0.15)',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            color: 'white',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            backdropFilter: 'blur(10px)',
+                        }}
+                    >
+                        Hands-Free Mode
+                    </div>
                 </div>
-            )}
 
-            <div style={styles.header}>
-                <h2>🎤 Hands-Free Mode</h2>
-                {status === 'checkout_complete' && (
-                    <button onClick={onExit} style={styles.exitButton}>Exit</button>
-                )}
-            </div>
+ 
+                {/* Central Microphone Icon */}
+                <div
+                    style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '40px',
+                    }}
+                >
+                    {/* Ripple effect when listening */}
+                    {isListening && (
+                        <>
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    width: '200px',
+                                    height: '200px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#4CAF50',
+                                    animation: 'ripple 1.5s ease-out infinite',
+                                }}
+                            />
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    width: '200px',
+                                    height: '200px',
+                                    borderRadius: '50%',
+                                    backgroundColor: '#4CAF50',
+                                    animation: 'ripple 1.5s ease-out infinite 0.5s',
+                                }}
+                            />
+                        </>
+                    )}
+ 
+                    {/* Main microphone circle */}
+                    <div
+                        style={{
+                            width: '120px',
+                            height: '120px',
+                            borderRadius: '50%',
+                            backgroundColor: isListening
+                                ? '#4CAF50'
+                                : isSpeaking
+                                ? '#2196F3'
+                                : isProcessing
+                                ? '#f97316'
+                                : '#6b7280',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: isListening || isSpeaking || isProcessing
+                                ? '0 8px 32px rgba(249,115,22,0.5)'
+                                : '0 4px 16px rgba(0,0,0,0.3)',
+                            animation: (isListening || isSpeaking) ? 'pulse 1.5s ease-in-out infinite' : 'none',
+                            transition: 'all 0.3s ease',
+                            position: 'relative',
+                            zIndex: 10,
+                        }}
+                    >
+                        {isProcessing ? (
+                            <div
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    border: '4px solid rgba(255,255,255,0.3)',
+                                    borderTop: '4px solid white',
+                                    borderRadius: '50%',
+                                    animation: 'spin 0.8s linear infinite',
+                                }}
+                            />
+                        ) : isSpeaking ? (
+                            <Volume2 size={48} color="white" />
+                        ) : isListening ? (
+                            <Mic size={48} color="white" />
+                        ) : (
+                            <MicOff size={48} color="white" />
+                        )}
+                    </div>
+                </div>
+ 
+                {/* Status Text */}
+                <div
+                    style={{
+                        textAlign: 'center',
+                        marginBottom: '60px',
+                    }}
+                >
+                    <p
+                        style={{
+                            color: 'white',
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            margin: '0 0 8px 0',
+                        }}
+                    >
+                        {getStatusMessage()}
+                    </p>
+                    {language && (
+                        <p
+                            style={{
+                                color: 'rgba(255,255,255,0.6)',
+                                fontSize: '14px',
+                                margin: 0,
+                            }}
+                        >
+                            Language: {language.toUpperCase()}
+                        </p>
+                    )}
 
-            <div style={styles.statusIndicator}>
-                {isListening && <div style={styles.listening}>🎤 Listening...</div>}
-                {isSpeaking && <div style={styles.speaking}>🔊 Speaking...</div>}
+                    {/* ✅ NEW - Show allergen profile if exists */}
+                    {customer && (profile?.allergens?.length > 0 || profile?.dietary_preferences?.length > 0) && (
+                        <div
+                            style={{
+                                marginTop: '12px',
+                                backgroundColor: 'rgba(255,255,255,0.15)',
+                                padding: '8px 16px',
+                                borderRadius: '12px',
+                                backdropFilter: 'blur(10px)',
+                            }}
+                        >
+                            <p style={{ color: 'white', fontSize: '12px', margin: 0 }}>
+                                🛡️ Profile Active: {[
+                                    ...(profile.allergens || []),
+                                    ...(profile.dietary_preferences || [])
+                                ].join(', ')}
+                            </p>
+                        </div>
+                    )}
+                </div>
+ 
+                {/* YouTube-style Subtitles at Bottom */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        bottom: '40px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: '90%',
+                        maxWidth: '800px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        alignItems: 'center',
+                    }}
+                >
+                    {/* User transcript */}
+                    {transcript && (
+                        <div
+                            style={{
+                                backgroundColor: 'rgba(255,255,255,0.95)',
+                                padding: '12px 20px',
+                                borderRadius: '8px',
+                                maxWidth: '80%',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                animation: 'slideUp 0.3s ease-out',
+                            }}
+                        >
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: '16px',
+                                    color: '#111827',
+                                    fontWeight: '500',
+                                    textAlign: 'center',
+                                }}
+                            >
+                                <span style={{ color: '#f97316', fontWeight: '700' }}>You:</span> {transcript}
+                            </p>
+                        </div>
+                    )}
+ 
+                    {/* Bot response */}
+                    {response && (
+                        <div
+                            style={{
+                                backgroundColor: 'rgba(249,115,22,0.95)',
+                                padding: '12px 20px',
+                                borderRadius: '8px',
+                                maxWidth: '80%',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                                animation: 'slideUp 0.3s ease-out',
+                            }}
+                        >
+                            <p
+                                style={{
+                                    margin: 0,
+                                    fontSize: '16px',
+                                    color: 'white',
+                                    fontWeight: '500',
+                                    textAlign: 'center',
+                                }}
+                            >
+                                <span style={{ fontWeight: '700' }}>Gusto:</span> {response}
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
-
-            <div style={styles.transcript}>
-                {transcript && <div style={styles.userMessage}><strong>You:</strong> {transcript}</div>}
-                {response && <div style={styles.botMessage}><strong>Bot:</strong> {response}</div>}
-            </div>
-
-            <div style={styles.instructions}>
-                <p>{status === 'language_select' ? 'Say your language...' :
-                    status === 'active' ? 'Say "menu", "cart", or tell me what you want' :
-                        'Order complete!'}</p>
-            </div>
-        </div>
+        </>
     );
-};
 
-const styles = {
-    container: {
-        padding: '20px', maxWidth: '600px', margin: '0 auto', backgroundColor: '#f5f5f5',
-        borderRadius: '10px', minHeight: '100vh'
-    },
-    header: { display: 'flex', justifyContent: 'space-between', marginBottom: '30px' },
-    exitButton: {
-        padding: '10px 20px', backgroundColor: '#ff4444', color: 'white', border: 'none',
-        borderRadius: '5px', cursor: 'pointer'
-    },
-    statusIndicator: { minHeight: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-    listening: { fontSize: '20px', color: '#4CAF50', fontWeight: 'bold' },
-    speaking: { fontSize: '20px', color: '#2196F3', fontWeight: 'bold' },
-    transcript: { backgroundColor: 'white', padding: '20px', borderRadius: '10px', minHeight: '200px' },
-    userMessage: { padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '5px', marginBottom: '10px' },
-    botMessage: { padding: '10px', backgroundColor: '#f1f8e9', borderRadius: '5px' },
-    instructions: { marginTop: '30px', textAlign: 'center' }
 };
 
 export default HandsFreeMode;

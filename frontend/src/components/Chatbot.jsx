@@ -414,7 +414,7 @@ export default function Chatbot({ isOpen, onClose }) {
             <button
               onClick={() => setHandsFreeMode(true)}
               style={{
-                background: '#4CAF50',
+                background: '#f97316',
                 padding: '8px 12px',
                 borderRadius: '8px',
                 color: 'white',
@@ -424,7 +424,7 @@ export default function Chatbot({ isOpen, onClose }) {
                 fontWeight: '600'
               }}
             >
-              ♿ Hands-Free
+              Voice Mode
             </button>
 
             <button

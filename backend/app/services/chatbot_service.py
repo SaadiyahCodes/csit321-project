@@ -6,6 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from app.models.menuitems import MenuItem
+from app.models.restaurant import Restaurant
 from app.services.menu_rag import MenuRAG
 import json
 import re
@@ -71,6 +72,7 @@ class ChatbotService:
     def get_system_prompt(
         self,
         menu_items: List[Dict],
+        restaurant_name: str = "this restaurant",
         user_allergies: List[str] = None,
         dietary_prefs: List[str] = None
     ) -> str:
@@ -88,7 +90,7 @@ class ChatbotService:
         if dietary_prefs:
             allergy_warning += f"\n⚠️ CRITICAL: Customer follows these dietary preferences: {', '.join(dietary_prefs)}. NEVER recommend dishes that violate these!"
         
-        return f"""You are Gusto AI, a friendly restaurant assistant helping customers order food.
+        return f"""You are Gusto AI, a friendly assistnat for {restaurant_name}. Help customers order food.
 
 YOUR MENU:
 {menu_text}
@@ -305,6 +307,9 @@ Customer: "checkout"
                     "error": True
                 }
             
+            restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
+            restaurant_name = restaurant.name if restaurant else "this restaurant"
+            
             # ===== 2. RULE-BASED EXTRACTION (free, instant) =====
             extracted = self.extract_keywords_and_preferences(message)
             print(f"🧪 Extracted: {extracted}")
@@ -336,7 +341,7 @@ Customer: "checkout"
                 self.conversations[session_id] = []
             
             history = self.conversations[session_id]
-            system_prompt = self.get_system_prompt(menu_items, all_allergies or None, all_dietary or None)
+            system_prompt = self.get_system_prompt(menu_items, restaurant_name, all_allergies or None, all_dietary or None)
             
             full_context = system_prompt + rag_context + "\n\n"
             

@@ -1,7 +1,7 @@
 // src/routes/customer/OrderSummaryPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Hash, CookingPot, Motorbike, ChefHat, ChefHatIcon, MotorbikeIcon } from "lucide-react";
+import { ArrowLeft, CheckCircle, Hash, CookingPot, Motorbike, ChefHat, NotebookPen } from "lucide-react";
 import TranslatedText from "../../components/TranslatedText";
 import LanguageSelector from "../../components/LanguageSelector";
 import { useSession } from "../../context/SessionContext";
@@ -335,7 +335,11 @@ export default function OrderSummaryPage() {
                     <span style={{ color: "#9ca3af", fontWeight: 500, marginLeft: 6 }}>× {item.quantity}</span>
                   </span>
                   {item.notes && (
-                    <span style={{ fontSize: 12, color: "#6b7280" }}>📝 {item.notes}</span>
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <NotebookPen size={12} /> {item.notes}
+                      </span>
+                    </span>
                   )}
                 </div>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#111", flexShrink: 0 }}>

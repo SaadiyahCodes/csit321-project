@@ -1,7 +1,7 @@
 // src/components/Chatbot.jsx
 import { useCustomerAuth } from "../context/CustomerAuthContext";
 import { useState, useEffect, useRef } from "react";
-import { Send, Mic, X, Loader2, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Send, Mic, X, Loader2, MicOff, Volume2, VolumeX, Bot, UtensilsCrossed } from "lucide-react";
 import { useSession } from "../context/SessionContext";
 import { useLanguage } from "../context/LanguageContext";
 import LanguageSelector from "./LanguageSelector";
@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "./Toast";
 import HandsFreeMode from "./HandsFreeMode";
 
-export default function Chatbot({ isOpen, onClose }) {
+export default function Chatbot({ isOpen, onClose, restaurantName }) {
   const { customer, profile } = useCustomerAuth();
 
   const navigate = useNavigate();
@@ -364,87 +364,61 @@ export default function Chatbot({ isOpen, onClose }) {
         }}
       >
         {/* Header */}
-        <div
-          style={{
-            background: "linear-gradient(to right, #f97316, #ea580c)",
-            padding: "16px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ flex: 1 }}>
-            <h2 style={{ color: "white", fontSize: "18px", fontWeight: "bold", margin: 0 }}>
-              Gusto AI Assistant
+        <div style={{
+          background: "linear-gradient(to right, #f97316, #ea580c)",
+          padding: "12px 14px",
+          flexShrink: 0,
+        }}>
+          {/* Row 1: name + buttons */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <UtensilsCrossed size={15} color="rgba(255,255,255,0.85)" style={{ flexShrink: 0 }} />
+            <h2 style={{
+              color: "white", fontWeight: "bold", margin: 0,
+              fontSize: "clamp(14px, 3vw, 17px)",
+              flex: 1, minWidth: 0,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {restaurantName ?? "Gusto Assistant"}
             </h2>
-            <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "11px", margin: "2px 0 0 0" }}>
-              Ask me anything about the menu!
-            </p>
+
+            {/* Buttons */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <LanguageSelector variant="compact" />
+
+              <button
+                onClick={() => setHandsFreeMode(true)}
+                title="Voice mode"
+                style={{
+                  background: "rgba(255,255,255,0.2)", border: "none",
+                  borderRadius: "8px", padding: "7px 11px",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", color: "white", fontSize: "12px", fontWeight: "600"
+                }}
+              >
+                Voice Mode
+              </button>
+
+              <button
+                onClick={onClose}
+                style={{
+                  background: "rgba(255,255,255,0.2)", border: "none",
+                  borderRadius: "50%", width: 30, height: 30,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={15} color="white" />
+              </button>
+            </div>
           </div>
 
-          {/* Language Selector, Voice Toggle & Close Button */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <LanguageSelector variant="compact" />
-
-            {/* Voice Reply Toggle */}
-            <button
-              onClick={() => setVoiceReplyEnabled((prev) => !prev)}
-              title={voiceReplyEnabled ? "Voice replies on" : "Voice replies off"}
-              style={{
-                background: voiceReplyEnabled ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)",
-                border: "1px solid rgba(255,255,255,0.4)",
-                borderRadius: "50%",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                transition: "background 0.2s",
-              }}
-            >
-              {voiceReplyEnabled
-                ? <Volume2 size={16} style={{ color: "white" }} />
-                : <VolumeX size={16} style={{ color: "rgba(255,255,255,0.7)" }} />
-              }
-            </button>
-
-            {/* Hands Free button */}
-            <button
-              onClick={() => setHandsFreeMode(true)}
-              style={{
-                background: '#f97316',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: '600'
-              }}
-            >
-              Voice Mode
-            </button>
-
-            <button
-              onClick={onClose}
-              style={{
-                background: "rgba(255,255,255,0.2)",
-                border: "none",
-                borderRadius: "50%",
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                transition: "background 0.2s",
-              }}
-            >
-              <X size={18} style={{ color: "white" }} />
-            </button>
-          </div>
+          {/* Row 2: description */}
+          <p style={{
+            color: "rgba(255,255,255,0.8)", margin: "4px 0 0",
+            fontSize: "clamp(10px, 2.5vw, 11px)",
+          }}>
+            Ask Gusto anything about {restaurantName ?? "the menu"}!
+          </p>
         </div>
 
         {/* Messages Container */}
@@ -494,25 +468,6 @@ export default function Chatbot({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Voice reply indicator banner */}
-          {voiceReplyEnabled && (
-            <div style={{
-              backgroundColor: "#f0fdf4",
-              border: "1px solid #bbf7d0",
-              borderRadius: "12px",
-              padding: "8px 14px",
-              fontSize: "11px",
-              color: "#166534",
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              gap: "6px"
-            }}>
-              <Volume2 size={12} />
-              Voice replies are on — I'll read my responses aloud.
-            </div>
-          )}
-
           {messages.length === 0 && (
             <div style={{ textAlign: "center", marginTop: "40px" }}>
               <div
@@ -524,27 +479,17 @@ export default function Chatbot({ isOpen, onClose }) {
                   display: "inline-block",
                 }}
               >
-                <p
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: "8px",
-                  }}
-                >
-                  👋{" "}
-                  {language === "ar"
-                    ? "مرحباً! أنا مساعدك الذكي"
-                    : language === "ur"
-                      ? "ہیلو! میں آپ کا AI اسسٹنٹ ہوں"
-                      : language === "hi"
-                        ? "नमस्ते! मैं आपका AI सहायक हूं"
-                        : language === "es"
-                          ? "¡Hola! Soy tu asistente de AI"
-                          : language === "fr"
-                            ? "Bonjour! Je suis votre assistant AI"
-                            : "Hi! I'm your AI assistant"}
-                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8 }}>
+                  <Bot size={20} color="#f97316" />
+                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#374151", margin: 0 }}>
+                    {language === "ar" ? "مرحباً! أنا Gusto"
+                      : language === "ur" ? "ہیلو! میں Gusto ہوں"
+                      : language === "hi" ? "नमस्ते! मैं Gusto हूं"
+                      : language === "es" ? "¡Hola! Soy Gusto"
+                      : language === "fr" ? "Bonjour! Je suis Gusto"
+                      : "Hi! I'm Gusto"}
+                  </p>
+                </div>
                 <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
                   {language === "ar"
                     ? "اسألني عن الأطباق أو المكونات أو الحساسية!"
@@ -600,20 +545,29 @@ export default function Chatbot({ isOpen, onClose }) {
                   {msg.text}
                 </p>
 
-                <span
-                  style={{
-                    fontSize: "10px",
-                    color: "#9ca3af",
-                    display: "block",
-                    textAlign: msg.sender === "user" ? "right" : "left",
-                    marginTop: "6px",
-                  }}
+                <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 6}}
                 >
-                  {msg.timestamp.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                  <span
+                    style={{
+                      fontSize: "10px", color: "#9ca3af" }}
+                  >
+                    {msg.timestamp.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  {msg.sender === "bot" && (
+                    <button
+                      onClick={() => speakText(msg.text)}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        padding: "0", display: "flex",
+                      }}
+                    >
+                      <Volume2 size={13} color="#696b6e" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

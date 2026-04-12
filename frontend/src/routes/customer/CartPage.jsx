@@ -1,7 +1,7 @@
 // src/routes/customer/CartPage.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, MapPin } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowLeft, ShoppingCart, MapPin, Loader2, NotebookPen } from "lucide-react";
 import TranslatedText from "../../components/TranslatedText";
 import LanguageSelector from "../../components/LanguageSelector";
 import Chatbot from "../../components/Chatbot";
@@ -26,6 +26,7 @@ export default function CartPage() {
   const [orderType, setOrderType] = useState("dine_in"); // "dine_in" or "delivery"
   const [tableNumber, setTableNumber] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [locating, setLocating] = useState(false);
 
   // Optimistic local quantities — { [itemId]: qty }
   const [localQtys, setLocalQtys] = useState({});
@@ -298,7 +299,9 @@ export default function CartPage() {
                       borderRadius: 999, padding: "2px 10px",
                       fontSize: 12, color: "#6b7280",
                     }}>
-                      📝 {item.notes}
+                      <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <NotebookPen size={12} /> {item.notes}
+                      </span>
                     </span>
                   )}
 
@@ -463,10 +466,53 @@ export default function CartPage() {
                 <TranslatedText>Delivery Address</TranslatedText>
                 <span style={{ color: "#ef4444", marginLeft: 2 }}>*</span>
               </label>
+
+              <button
+                onClick={async () => {
+                  if (!navigator.geolocation) {
+                    showToast("Geolocation not supported on this device", "error");
+                    return;
+                  }
+                  setLocating(true);
+                  navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                      try {
+                        const { latitude, longitude } = pos.coords;
+                        const res = await fetch(
+                          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+                        );
+                        const data = await res.json();
+                        setDeliveryAddress(data.display_name || `${latitude}, ${longitude}`);
+                      } catch {
+                        showToast("Could not fetch address, please type it manually", "error");
+                      } finally {
+                        setLocating(false);
+                      }
+                    },
+                    () => {
+                      showToast("Location access denied — please type your address", "error");
+                      setLocating(false);
+                    }
+                  );
+                }}
+                style={{
+                  width: "100%", padding: "11px 14px", borderRadius: 12,
+                  border: "1.5px dashed #f97316", background: "#fff7ed",
+                  color: "#f97316", fontSize: 14, fontWeight: 700,
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  justifyContent: "center", gap: 8, marginBottom: 10,
+                }}
+              >
+                {locating
+                  ? <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Detecting location...</>
+                  : <><MapPin size={16} /> Use my current location</>
+                }
+              </button>
+
               <textarea
                 value={deliveryAddress}
                 onChange={e => setDeliveryAddress(e.target.value)}
-                placeholder={tSync("Enter your delivery address...")}
+                placeholder={tSync("Or type your delivery address...")}
                 rows={3}
                 style={{
                   width: "100%", boxSizing: "border-box",

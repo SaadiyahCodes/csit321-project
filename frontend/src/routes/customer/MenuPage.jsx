@@ -415,7 +415,7 @@ export default function MenuPage() {
         <MessageCircle size={24} color="white" />
       </button>
 
-      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} restaurantName={restaurant?.name} />
 
       {selectedItem && (
         <DishBottomSheet

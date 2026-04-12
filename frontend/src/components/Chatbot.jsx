@@ -750,8 +750,10 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
       {ToastContainer}
       {handsFreeMode && (
         <HandsFreeMode
-          sessionId={sessionId}  // ← Restaurant session, not landing!
+          sessionId={sessionId}  // - Restaurant session, not landing!
           onExit={() => setHandsFreeMode(false)}
+          showToast={showToast}
+          fetchCartCount={fetchCartCount}
         />
       )}
     </>

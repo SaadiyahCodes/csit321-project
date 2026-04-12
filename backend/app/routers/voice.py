@@ -167,17 +167,17 @@ async def read_menu_handsfree(
             MenuItem.is_available == True
         ).all()
         
-        # Build voice-friendly menu text
+        #List names first, then ask
         menu_text = "Here are our menu items: "
         
+        item_names = []
         for item in menu_items:
             # Remove emojis for voice
             clean_name = re.sub(r'[^\w\s$.,]', '', item.name)
-            clean_desc = re.sub(r'[^\w\s$.,]', '', item.description or '')
-            
-            menu_text += f"{clean_name}, {item.price} dollars. {clean_desc}. "
+            item_names.append(f"{clean_name} for {item.price} dollars")
         
-        menu_text += "What would you like to order?"
+        menu_text += ", ".join(item_names) + ". "
+        menu_text += "Which item would you like to know more about, or would you like to order something?"
         
         # Translate if needed
         if request.language != "en":

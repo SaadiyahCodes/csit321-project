@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Mic, MicOff, Volume2 } from 'lucide-react';
 import api from '../api';
 import { useCustomerAuth } from '../context/CustomerAuthContext';
+import { useSession } from "../context/SessionContext";
 
-const HandsFreeMode = ({ sessionId, onExit }) => {
+const HandsFreeMode = ({ sessionId, onExit, showToast }) => {
     const { customer, profile } = useCustomerAuth();
+    const { fetchCartCount } = useSession();
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [language, setLanguage] = useState(null);
@@ -48,7 +50,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 // Rising tone - "I'm ready to listen"
                 oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
                 oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.15);
-                gainNode.gain.value = 0.3;
+                gainNode.gain.value = 0.4;
                 oscillator.start();
                 oscillator.stop(audioContext.currentTime + 0.15);
             } 
@@ -62,7 +64,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             else if (type === 'processing') {
                 // Double beep - "Thinking..."
                 oscillator.frequency.value = 600;
-                gainNode.gain.value = 0.25;
+                gainNode.gain.value = 0.35;
                 oscillator.start();
                 oscillator.stop(audioContext.currentTime + 0.1);
                 
@@ -72,7 +74,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     osc2.connect(gain2);
                     gain2.connect(audioContext.destination);
                     osc2.frequency.value = 600;
-                    gain2.gain.value = 0.25;
+                    gain2.gain.value = 0.35;
                     osc2.start();
                     osc2.stop(audioContext.currentTime + 0.1);
                 }, 120);
@@ -81,7 +83,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 // Falling tone - "I'm about to speak"
                 oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
                 oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2);
-                gainNode.gain.value = 0.25;
+                gainNode.gain.value = 0.3;
                 oscillator.start();
                 oscillator.stop(audioContext.currentTime + 0.2);
             }
@@ -120,16 +122,20 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
     };
 
     const provideFeedback = (type, message = '') => {
+        console.log("🔊 provideFeedback called:", type);
         switch(type) {
             case 'listening_started':
+                console.log("🎵 Playing listening_started sound");
                 playSound('capture');
                 vibrate(50);
                 break;
             case 'speech_captured':
+                console.log("🎵 Playing capture sound");
                 playSound('capture');
                 vibrate(100);
                 break;
             case 'processing':
+                console.log("🎵 Playing processing sound");
                 playSound('processing');
                 vibrate(50);
                 break;
@@ -158,7 +164,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             recognitionRef.current.onend = handleSpeechEnd;
             recognitionRef.current.onerror = handleSpeechError;
         }
-
+        provideFeedback("speaking");
         speakText("Please say your language: English, Arabic, Hindi, Urdu, Spanish, or French.", 'en');
 
         return () => {
@@ -208,7 +214,9 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         isStartingRef.current = false;
         isProcessingRef.current = false;
-        
+        if (fetchCartCount) {
+            fetchCartCount();
+        }
         // Call parent's onExit
         onExit();
     };
@@ -376,13 +384,13 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         const welcome = {
             'en': "Welcome! Say menu to hear dishes, or tell me what you want.",
-            'ar': "مرحبا! قل القائمة أو أخبرني.",
-            'hi': "स्वागत है! मेन्यू कहें या बताएं।",
-            'ur': "خوش آمدید! مینو کہیں۔",
+            'ar': "مرحباً! قل قائمة الطعام أو أخبرني بما تريد",
+            'hi': "स्वागत है! मेन्यू कहें या बताएं कि आपको क्या चाहिए।",
+            'ur': "خوش آمدید! مینو بولیں، یا بتائیں کہ آپ کیا چاہتے ہیں۔",
             'es': "¡Bienvenido! Di menú o dime qué quieres.",
             'fr': "Bienvenue! Dites menu ou dites-moi."
         };
-
+        provideFeedback("processing");
         speakText(welcome[lang], lang);
     };
 
@@ -400,6 +408,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             ) {
                 const item = pendingAllergenItemRef.current;
                 if (item) {
+                    provideFeedback("processing");
                     speakText(
                         "Great. Adding the item to your cart.",
                         lang
@@ -425,6 +434,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                 lower_.includes("i have") ||
                 lower_.includes("allergic")
             ) {
+                provideFeedback("processing");
                 speakText(
                     "Thank you for letting me know. I will not add this item. Would you like a safer alternative?",
                     lang
@@ -523,6 +533,15 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                         lang
                     );
                     return;
+                }
+
+                //SHOW TOAST IF ITEMS ADDED
+                if (res.data.items_added_to_cart?.length > 0) {
+                    const itemNames = res.data.items_added_to_cart.join(", ");
+                    if (showToast) {
+                        showToast(`Added to cart: ${itemNames}`, "success");
+                    }
+                    if (fetchCartCount) fetchCartCount();
                 }
                 
                 if (res.data?.bot_text) {

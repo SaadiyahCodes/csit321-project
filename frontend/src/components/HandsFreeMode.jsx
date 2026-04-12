@@ -15,12 +15,133 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
     const recognitionRef = useRef(null);
     const audioRef = useRef(new Audio());
+    const audioContextRef = useRef(null);
     const isStartingRef = useRef(false); // ← CRITICAL: Prevents double-start
     const statusRef = useRef('language_select');
     const languageRef = useRef(null);
     const isProcessingRef = useRef(false); // To prevent overlapping commands
     const lastCommandRef = useRef("");
     const pendingAllergenItemRef = useRef(null);
+
+    //HAPTIC FEEDBACK
+    const vibrate = (pattern) => {
+        if (navigator.vibrate) {
+            navigator.vibrate(pattern);
+        }
+    };
+
+    //AUDIO FEEDBACK
+    const playSound = (type) => {
+        try {
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const audioContext = audioContextRef.current;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Different sounds for different events
+             if (type === 'listening_started') {
+                // Rising tone - "I'm ready to listen"
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.15);
+                gainNode.gain.value = 0.3;
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.15);
+            } 
+            else if (type === 'speech_captured') {
+                // Short high beep - "Got it!"
+                oscillator.frequency.value = 1000;
+                gainNode.gain.value = 0.35;
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.08);
+            } 
+            else if (type === 'processing') {
+                // Double beep - "Thinking..."
+                oscillator.frequency.value = 600;
+                gainNode.gain.value = 0.25;
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+                
+                setTimeout(() => {
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioContext.destination);
+                    osc2.frequency.value = 600;
+                    gain2.gain.value = 0.25;
+                    osc2.start();
+                    osc2.stop(audioContext.currentTime + 0.1);
+                }, 120);
+            }
+            else if (type === 'speaking') {
+                // Falling tone - "I'm about to speak"
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.2);
+                gainNode.gain.value = 0.25;
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.2);
+            }
+            else if (type === 'error') {
+                // Triple descending beeps - "Error!"
+                oscillator.frequency.value = 500;
+                gainNode.gain.value = 0.35;
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+                
+                setTimeout(() => {
+                    const osc2 = audioContext.createOscillator();
+                    const gain2 = audioContext.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioContext.destination);
+                    osc2.frequency.value = 400;
+                    gain2.gain.value = 0.35;
+                    osc2.start();
+                    osc2.stop(audioContext.currentTime + 0.1);
+                }, 150);
+                
+                setTimeout(() => {
+                    const osc3 = audioContext.createOscillator();
+                    const gain3 = audioContext.createGain();
+                    osc3.connect(gain3);
+                    gain3.connect(audioContext.destination);
+                    osc3.frequency.value = 300;
+                    gain3.gain.value = 0.35;
+                    osc3.start();
+                    osc3.stop(audioContext.currentTime + 0.1);
+                }, 300);
+            }
+        } catch (error) {
+            console.log("Audio context not available:", error);
+        }
+    };
+
+    const provideFeedback = (type, message = '') => {
+        switch(type) {
+            case 'listening_started':
+                playSound('capture');
+                vibrate(50);
+                break;
+            case 'speech_captured':
+                playSound('capture');
+                vibrate(100);
+                break;
+            case 'processing':
+                playSound('processing');
+                vibrate(50);
+                break;
+            case 'speaking':
+                vibrate(200); // Longer vibration when bot starts speaking
+                break;
+            case 'error':
+                playSound('error');
+                vibrate([100, 50, 100]);
+                break;
+        }
+    };
 
     useEffect(() => {
         statusRef.current = status;
@@ -53,12 +174,40 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.currentTime = 0;
+            audioRef.current.src = '';
+            audioRef.current.onended = null;
         }
         
         // Stop speech recognition
         if (recognitionRef.current) {
-            recognitionRef.current.abort();
+            try {
+                recognitionRef.current.stop();
+                recognitionRef.current.abort();
+                recognitionRef.current.onresult = null;
+                recognitionRef.current.onend = null;
+                recognitionRef.current.onerror = null;
+            } catch (e) {
+                console.log("Recognition already stopped");
+            }
         }
+
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+
+        if (navigator.vibrate) {
+            navigator.vibrate(0);
+        }
+
+        setIsListening(false);
+        setIsSpeaking(false);
+        setIsLoading(false);
+        setTranscript('');
+        setResponse('');
+
+        isStartingRef.current = false;
+        isProcessingRef.current = false;
         
         // Call parent's onExit
         onExit();
@@ -67,6 +216,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
     const speakText = async (text, lang = language || 'en') => {
         setIsSpeaking(true);
         setResponse(text);
+        provideFeedback('speaking');
 
         try {
             const res = await api.post('/api/voice/tts', null, {
@@ -119,6 +269,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     recognitionRef.current.start();
                     setIsListening(true);
                     setTranscript('');
+                    provideFeedback('listening_started');
                     console.log("🎤 Started listening");
 
                     setTimeout(() => {
@@ -129,6 +280,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     }, 10000); // 10 seconds max listening time
                 } catch (err) {
                     console.error("Start failed:", err);
+                    provideFeedback('error');
                     isStartingRef.current = false;
                 }
             }, 400); // IMPORTANT: 400ms delay stabilizes WebSpeech API
@@ -148,7 +300,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
 
         if (lastResult.isFinal) {
             console.log('Final heard:', text);
-            
+            provideFeedback('speech_captured');
             if (statusRef.current === 'language_select') {
                 handleLanguageSelection(text);
             } else if (statusRef.current === 'active') {
@@ -171,7 +323,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
             console.log("Stopping mic after checkout");
             return;
         }
-        // ACTIVE mode
+        {/*// ACTIVE mode
         if (statusRef.current === 'active') {
             if (isSpeaking || isLoading) {
                 console.log("Waiting before restart...");
@@ -185,7 +337,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         else if (statusRef.current === 'language_select' && !isSpeaking) {
             console.log("Restarting mic (language select)");
             setTimeout(() => startListening(), 700);
-        }
+        }*/}
     };
 
     const handleSpeechError = (event) => {
@@ -299,46 +451,52 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
         isProcessingRef.current = true;
 
         if (!lang) return;
-
         setIsLoading(true);
+        provideFeedback('processing');
 
         try {
             if (lower_.includes('menu') || lower_.includes('मेन्यू') || lower_.includes('قائمة')) {
-
                 const res = await api.post('/api/voice/handsfree/menu', {
                     session_id: sessionId,
                     language: lang
                 });
 
-                setTimeout(() => {
+                if (res.data?.text) {
                     speakText(res.data.text, lang);
-                }, 500);
+                } else {
+                    throw new Error("Invalid menu response");
+                }
             }
 
             else if (lower_.includes('cart') || lower_.includes('कार्ट') || lower_.includes('سلة')) {
-
                 const res = await api.post('/api/voice/handsfree/cart', {
                     session_id: sessionId,
                     language: lang
                 });
 
-                speakText(res.data.text, lang);
+                if (res.data?.text) {
+                    speakText(res.data.text, lang);
+                } else {
+                    throw new Error("Invalid cart response");
+                }
             }
 
             else if (lower_.includes('checkout') || lower_.includes('الدفع')) {
-
                 const res = await api.post('/api/voice/handsfree/checkout', {
                     session_id: sessionId,
                     language: lang
                 });
 
-                speakText(res.data.text, lang);
-                statusRef.current = 'checkout_complete';
-                setStatus('checkout_complete');
+                if (res.data?.text) {
+                    speakText(res.data.text, lang);
+                    statusRef.current = 'checkout_complete';
+                    setStatus('checkout_complete');
+                } else {
+                    throw new Error("Invalid checkout response");
+                }
             }
 
             else {
-
                 const res = await api.post('/api/voice/chat', {
                     session_id: sessionId,
                     language: lang,
@@ -346,7 +504,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     allergies: []
                 });
 
-                // ✅ CHECK FOR REJECTED ITEMS (allergen conflicts)
+                // CHECK FOR REJECTED ITEMS
                 if (res.data.intent?.items_rejected?.length > 0) {
                     const rejectedItems = res.data.intent.items_rejected.map(i => i.name).join(", ");
                     speakText(
@@ -356,7 +514,7 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     return;
                 }
 
-                // CHECK FOR ALLERGENS FROM BACKEND
+                // CHECK FOR ALLERGENS
                 if (res.data.allergens && res.data.allergens.length > 0) {
                     pendingAllergenItemRef.current = res.data.item;
                     statusRef.current = "allergen_check";
@@ -366,13 +524,17 @@ const HandsFreeMode = ({ sessionId, onExit }) => {
                     );
                     return;
                 }
-                speakText(res.data.bot_text, lang);
+                
+                if (res.data?.bot_text) {
+                    speakText(res.data.bot_text, lang);
+                }
             }
 
         } catch (error) {
-            console.error("Validation Error:", error.response?.data);
-            console.error('Command error:', error);
-            speakText("Sorry, error occurred.", lang);
+            console.error("Command error:", error);
+            console.error("Error details:", error.response?.data);
+            provideFeedback('error');
+            speakText("Sorry, an error occurred.", lang || 'en');
         } finally {
             setIsLoading(false);
             isProcessingRef.current = false;

@@ -15,6 +15,7 @@ import CustomerProfile from './routes/customer/CustomerProfile';
 import { SessionProvider } from './context/SessionContext';
 import ARViewer from './ar/ARViewer';
 import { AuthProvider } from './context/AuthContext';
+import AdminOrders from './routes/Admin Orders';
 
 function App() {
   return (
@@ -54,6 +55,14 @@ function App() {
           <AuthProvider>
             <AdminRoute>
               <AdminAnalytics />
+            </AdminRoute>
+          </AuthProvider>
+        } />
+
+        <Route path="/admin/orders" element={
+          <AuthProvider>
+            <AdminRoute>
+              <AdminOrders />
             </AdminRoute>
           </AuthProvider>
         } />

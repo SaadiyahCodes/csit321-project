@@ -18,9 +18,10 @@ import heroImg1 from "../../assets/heroimg1.jpg";
 import heroImg2 from "../../assets/heroimg2.jpg";
 import heroImg3 from "../../assets/heroimg3.jpg";
 import heroImg4 from "../../assets/heroimg4.jpg";
-import arImg2 from "../../assets/ARimg2.png";
-import aboutBurger from "../../assets/about-burger.jpg";
-import aboutChatbot from "../../assets/about-chatbot.png";
+import aboutAR from "../../assets/aboutAR.png";
+import aboutAllergy from "../../assets/aboutAllergy.png";
+import aboutVoice from "../../assets/aboutVoice.png";
+
 
 // ── Top Navbar ────────────────────────────────────────────────────────────────
 function TopNav({ customer }) {
@@ -398,7 +399,7 @@ function FoodCard({ card, index }) {
 // ── Hero ──────────────────────────────────────────────────────────────────────
 function Hero({ onScrollDown }) {
   return (
-    <section style={{
+    <section className="hero-section" style={{
       minHeight: "80vh",
       background: "linear-gradient(160deg, #ff6a00 0%, #f97316 40%, #ea580c 70%, #c2410c 100%)",
       display: "flex",
@@ -425,7 +426,7 @@ function Hero({ onScrollDown }) {
         width: "100%", maxWidth: 560, textAlign: "center",
         position: "relative", zIndex: 1,
       }}>
-        <div style={{ animation: "heroFadeIn 0.6s ease both", width: "100%" }}>
+        <div style={{ animation: "heroFadeIn 0.6s ease both", width: "100%", lineHeight: 0 }}>
           <img
             src={logo2}
             alt="Gusto"
@@ -433,7 +434,7 @@ function Hero({ onScrollDown }) {
           />
         </div>
 
-        <div style={{ animation: "heroFadeIn 0.6s 0.1s ease both", marginTop: 8 }}>
+        <div style={{ animation: "heroFadeIn 0.6s 0.1s ease both", marginTop: 0 }}>
           <p style={{
             color: "white",
             fontSize: "clamp(15px,2.2vw,20px)",
@@ -445,21 +446,29 @@ function Hero({ onScrollDown }) {
             <TranslatedText>Every order is a conversation. We understand it.</TranslatedText>
           </p>
         </div>
+      </div>
 
+      <div style={{
+        position: "absolute",
+        bottom: 24,
+        left: 0,
+        right: 0,
+        display: "flex",
+        justifyContent: "center",
+        zIndex: 1,
+      }}>
         <button
           onClick={onScrollDown}
           style={{
-            marginTop: 48,
             background: "none", border: "none", cursor: "pointer",
             color: "rgba(255,255,255,0.65)",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-            animation: "heroFadeIn 0.6s 0.6s ease both",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
             fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
-            padding: 8, zIndex: 1,
+            padding: 8,
           }}
         >
           EXPLORE
-          <ChevronDown size={16} style={{ animation: "bounce 1.6s ease-in-out infinite" }} />
+          <ChevronDown size={16} />
         </button>
       </div>
 
@@ -487,7 +496,13 @@ function Hero({ onScrollDown }) {
           .food-card[data-card-index="3"] {
             left: auto !important;
             right: 5% !important;
-            top: 55% !important;
+            top: 67% !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .hero-section {
+            min-height: 60vh !important;
           }
         }
       `}</style>
@@ -498,36 +513,17 @@ function Hero({ onScrollDown }) {
 // ── Stacking Features / About Section ────────────────────────────────────────
 const FEATURES = [
   {
-    title: "Allergen Safety Filtering",
-    subtitle: "Dine without worry",
+    title: "Smart Voice Support",
+    subtitle: "Accessibility is at the table",
     accent: "#4CAF50",
-    description: <>Smart filtering flags and hides dishes based on your dietary restrictions and allergens.<br/>Set your profile once and dine safe every time.</>,
+    description: <>Speak with Gusto using voice and haptic feedback.<br/>Everyone deserves to navigate ordering on their own.</>,
     illustration: (
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
         <img
-          src={aboutBurger}
+          src={aboutVoice}
           alt="Burger"
           style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 12, display: "block" }}
         />
-        {/* Tags overlaid at bottom of image */}
-        <div style={{
-          position: "absolute", bottom: 10, left: 0, right: 0,
-          display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap", padding: "0 8px",
-        }}>
-          {[
-            { label: "Dairy-Free", safe: false },
-            { label: "Halal",      safe: true  },
-          ].map(tag => (
-            <span key={tag.label} style={{
-              padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: 600,
-              background: tag.safe ? "rgba(76,175,80,0.85)" : "rgba(220,38,38,0.85)",
-              color: "white",
-              backdropFilter: "blur(4px)",
-            }}>
-              {tag.safe ? "✓" : "✗"} {tag.label}
-            </span>
-          ))}
-        </div>
       </div>
     ),
   },
@@ -535,12 +531,12 @@ const FEATURES = [
     title: "Smart AI Chatbot",
     subtitle: "Your personal food guide",
     accent: "#F28C28",
-    description: <>An AI assistant that knows every menu.<br/>Ask for recommendations, ingredient details,<br/>or place your order completely hands-free<br/>— in any language.</>,
+    description: <>An AI assistant that knows every menu AND your allergen profile.<br/>Set your profile once and dine safe every time.</>,
     illustration: (
       <img
-        src={aboutChatbot}
+        src={aboutAllergy}
         alt="Chatbot screenshot"
-        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: 12, display: "block" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 12, display: "block" }}
       />
     ),
   },
@@ -548,12 +544,12 @@ const FEATURES = [
     title: "AR Food Preview",
     subtitle: "See before you eat",
     accent: "#5C8DCA",
-    description: <>Point your camera at the table and see a life-sized photorealistic preview of your dish before ordering.<br/>Know exactly what you're getting.</>,
+    description: <>See a life-sized photorealistic preview of your dish before ordering.<br/>Know exactly what you're getting.</>,
     illustration: (
       <img
-        src={arImg2}
+        src={aboutAR}
         alt="AR food preview"
-        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: 12, display: "block" }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", borderRadius: 12, display: "block" }}
       />
     ),
   },
@@ -605,36 +601,40 @@ function AboutSection() {
           </p>
         </div>
       </Reveal>
-      {/*Cards*/}
+
+      {/* Cards */}
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
         <Reveal delay={100}>
           <div
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
-            style={{ position: "relative", height: 400 }}
+            style={{ position: "relative", height: 410, marginBottom: 24 }}
           >
             {FEATURES.map((f, i) => (
               <div
                 key={i}
                 style={{
-                  position: "absolute", inset: 0,
+                  position: "absolute",
+                  inset: 0,
                   transition: "transform 0.65s cubic-bezier(0.34,1.56,0.64,1), opacity 0.65s ease",
                   ...getCardStyle(i),
                 }}
               >
-                <div style={{
-                  height: "100%", borderRadius: 24,
+                <div className="about-stack-card" style={{
+                  height: "100%",
+                  borderRadius: 24,
                   background: "white",
                   border: "1px solid rgba(0,0,0,0.07)",
                   boxShadow: "0 8px 32px rgba(249,115,22,0.07)",
-                  padding: "clamp(20px,4vw,28px)",
+                  padding: "clamp(16px,4vw,24px)",
                   boxSizing: "border-box",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
+                  gap: 12,
                 }}>
-                  {/* Header: centered title + subtitle, no icon */}
-                  <div style={{ textAlign: "center", marginBottom: 16 }}>
+                  {/* Header */}
+                  <div style={{ textAlign: "center" }}>
                     {f.subtitle && (
                       <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>
                         <TranslatedText>{f.subtitle}</TranslatedText>
@@ -645,15 +645,13 @@ function AboutSection() {
                     </h3>
                   </div>
 
-                  {/* Body: image left, description right */}
-                  <div style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
-                    {/* Left: illustration strictly clipped */}
-                    <div style={{ flex: "0 0 52%", minWidth: 0, overflow: "hidden", borderRadius: 12 }}>
+                  {/* Body */}
+                  <div className="about-card-body" style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
+                    <div className="about-card-img" style={{ flex: 1, minWidth: 0, overflow: "hidden", borderRadius: 12, minHeight: 0 }}>
                       {f.illustration}
                     </div>
-                    {/* Right: description vertically centered */}
-                    <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
-                      <p style={{ fontSize: 14, color: "#000000", lineHeight: 2, margin: 0 }}>
+                    <div className="about-card-text" style={{ flex: 1, display: "flex", alignItems: "flex-start", paddingTop: 8 }}>
+                      <p style={{ fontSize: 13, color: "#000000", lineHeight: 1.8, margin: 0 }}>
                         <TranslatedText>{f.description}</TranslatedText>
                       </p>
                     </div>
@@ -685,6 +683,24 @@ function AboutSection() {
           </div>
         </Reveal>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .about-card-body {
+            flex-direction: column !important;
+            overflow-y: auto;
+          }
+          .about-card-img {
+            flex: 0 0 220px !important;
+            width: 100% !important;
+            height: 220px !important;
+          }
+          .about-card-text p {
+            font-size: 13px !important;
+            line-height: 1.7 !important;
+          }
+        }
+      `}</style>
     </section>
   );
 }

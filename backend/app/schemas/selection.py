@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field, computed_field
 from datetime import datetime
 from app.schemas.menu import MenuItemResponse
+from app.schemas.customer import CustomerResponse
 
 # Schema for creating a selection item
 class SelectionItemAdd(BaseModel):
@@ -48,6 +49,7 @@ class SelectionResponse(BaseModel):
     order_type: str | None = None
     table_number: str | None = None
     delivery_address: str | None = None
+    phone_number: str | None = None
 
     # Computed field for the total price of the selection
     @computed_field

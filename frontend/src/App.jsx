@@ -16,34 +16,62 @@ import { SessionProvider } from './context/SessionContext';
 import ARViewer from './ar/ARViewer';
 import { AuthProvider } from './context/AuthContext';
 import AdminOrders from './routes/Admin Orders';
+import { LanguageProvider } from './context/LanguageContext.jsx'; // ← Add this import
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Customer routes wrapped with LanguageProvider */}
         <Route path="/" element={
-          <SessionProvider>
-            <LandingPage/>
-          </SessionProvider>
+          <LanguageProvider>
+            <SessionProvider>
+              <LandingPage/>
+            </SessionProvider>
+          </LanguageProvider>
         } />
-        <Route path="/ar" element={<ARViewer />} />
-        {/* Wrap restaurant routes with SessionProvider */}
+        
+        <Route path="/ar" element={
+          <LanguageProvider>
+            <ARViewer />
+          </LanguageProvider>
+        } />
+        
         <Route path="/restaurant/:restaurantId/*" element={
-          <SessionProvider>
-            <Routes>
-              <Route path="menu" element={<MenuPage />} />
-              <Route path="cart" element={<CartPage />} />
-              <Route path="order-summary" element={<OrderSummaryPage />} />
-            </Routes>
-          </SessionProvider>
+          <LanguageProvider>
+            <SessionProvider>
+              <Routes>
+                <Route path="menu" element={<MenuPage />} />
+                <Route path="cart" element={<CartPage />} />
+                <Route path="order-summary" element={<OrderSummaryPage />} />
+              </Routes>
+            </SessionProvider>
+          </LanguageProvider>
         } />
 
-        {/*Admin Portal */}
+        <Route path="/customer/login" element={
+          <LanguageProvider>
+            <SessionProvider>
+              <CustomerLogin/>
+            </SessionProvider>
+          </LanguageProvider>
+        } />
+        
+        <Route path="/customer/profile" element={
+          <LanguageProvider>
+            <SessionProvider>
+              <CustomerProfile/>
+            </SessionProvider>
+          </LanguageProvider>
+        } />
+
+        {/* Admin routes WITHOUT LanguageProvider */}
         <Route path="/login" element={
           <AuthProvider>
             <Login />
           </AuthProvider>
         } />
+        
         <Route path="/admin" element={
           <AuthProvider>
             <AdminRoute>
@@ -51,6 +79,7 @@ function App() {
             </AdminRoute>
           </AuthProvider>
         } />
+        
         <Route path="/admin/analytics" element={
           <AuthProvider>
             <AdminRoute>
@@ -65,18 +94,6 @@ function App() {
               <AdminOrders />
             </AdminRoute>
           </AuthProvider>
-        } />
-
-        {/* Customer Login */}
-        <Route path="/customer/login" element={
-          <SessionProvider>
-            <CustomerLogin/>
-          </SessionProvider>
-        } />
-        <Route path="/customer/profile" element={
-          <SessionProvider>
-            <CustomerProfile/>
-          </SessionProvider>
         } />
       </Routes>
     </BrowserRouter>

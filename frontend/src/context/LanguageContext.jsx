@@ -52,6 +52,8 @@ export function LanguageProvider({ children }) {
     return stored ? JSON.parse(stored) : {};
   });
 
+  const [isPreloading, setIsPreloading] = useState(false);
+
   const setLanguage = (code) => {
     setLanguageState(code);
     localStorage.setItem('gusto_language', code);
@@ -74,7 +76,7 @@ export function LanguageProvider({ children }) {
     const lang = LANGUAGES.find(l => l.code === language);
     document.documentElement.dir = lang?.rtl ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
-  }, []);
+  }, [language]);
 
   // Translation function
   const t = async (text) => {
@@ -132,6 +134,7 @@ export function LanguageProvider({ children }) {
 
     if (uncached.length === 0) return; //nothign to translate
 
+    setIsPreloading(true);
     try {
       const response = await api.post('/api/translate/batch-ui', {
         texts: uncached,
@@ -150,6 +153,8 @@ export function LanguageProvider({ children }) {
       }
     } catch (err) {
       console.error('Batch preload failed:', err);
+    } finally {
+      setIsPreloading(false);
     }
   };
 
@@ -163,7 +168,8 @@ export function LanguageProvider({ children }) {
         isRTL: currentLanguage.rtl || false,
         t,
         tSync,
-        preloadTranslations
+        preloadTranslations,
+        isPreloading
       }}
     >
       {children}

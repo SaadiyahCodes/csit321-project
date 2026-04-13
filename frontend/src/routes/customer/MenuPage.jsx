@@ -24,6 +24,7 @@ export default function MenuPage() {
   const { customer, profile } = useCustomerAuth();
   const { confirm, ConfirmContainer } = useConfirm();
   const navigate = useNavigate();
+  const fetchingRef = useRef(false);
   const { showToast, ToastContainer } = useToast();
   const [activeCategory, setActiveCategory] = useState("all");
   const [menuItems, setMenuItems] = useState([]);
@@ -67,6 +68,8 @@ export default function MenuPage() {
   };
 
   const fetchMenuItems = async () => {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     setLoading(true);
     try {
       const restaurantRes = await api.get(`/api/restaurants/${restaurantId}`);
@@ -82,6 +85,7 @@ export default function MenuPage() {
       console.error("Error fetching menu:", err);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   };
 
@@ -345,7 +349,7 @@ export default function MenuPage() {
                     color: "white", fontSize: 13, fontWeight: 600,
                     padding: "3px 12px", borderRadius: 999,
                   }}>
-                    {restaurant.category}
+                    <TranslatedText>{restaurant.category}</TranslatedText>
                   </span>
                 )}
               </div>

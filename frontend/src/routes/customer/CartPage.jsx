@@ -27,6 +27,7 @@ export default function CartPage() {
   const [tableNumber, setTableNumber] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [locating, setLocating] = useState(false);
+  const [restaurant, setRestaurant] = useState(null);
 
   // Optimistic local quantities — { [itemId]: qty }
   const [localQtys, setLocalQtys] = useState({});
@@ -52,6 +53,8 @@ export default function CartPage() {
     try {
       const response = await api.get(`/api/selections/${selectionId}?session_id=${sessionId}`);
       const cartData = response.data;
+      const restRes = await api.get(`/api/restaurants/${restaurantId}`);
+      setRestaurant(restRes.data);
 
       if (language !== "en" && cartData.items) {
         for (let item of cartData.items) {
@@ -444,20 +447,24 @@ export default function CartPage() {
                 <TranslatedText>Table Number</TranslatedText>
                 <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={tableNumber}
                 onChange={e => setTableNumber(e.target.value)}
-                placeholder={tSync("e.g. Table 7")}
                 style={{
                   width: "100%", boxSizing: "border-box",
                   padding: "11px 14px", borderRadius: 12, fontSize: 15,
-                  border: "1.5px solid #e5e7eb", outline: "none",
-                  fontFamily: "inherit", color: "#111",
+                  border: `1.5px solid ${tableNumber ? "#f97316" : "#e5e7eb"}`,
+                  outline: "none", fontFamily: "inherit", color: tableNumber ? "#111" : "#9ca3af",
+                  background: "white", cursor: "pointer", appearance: "auto",
                 }}
-                onFocus={e => e.target.style.borderColor = "#f97316"}
-                onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-              />
+              >
+                <option value="">{tSync("Select a table…")}</option>
+                {Array.from({ length: restaurant?.table_count || 10 }, (_, i) => (
+                  <option key={i + 1} value={`Table ${i + 1}`}>
+                    {tSync("Table")} {i + 1}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : (
             <div>

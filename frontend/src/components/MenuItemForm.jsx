@@ -5,13 +5,14 @@ const CATEGORIES = ["mains", "sides", "dessert", "drinks"];
 export default function MenuItemForm({ item, onSave, onCancel }) {
   const [formData, setFormData] = useState(item ? {
     ...item,
-    allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : ""
+    allergens: Array.isArray(item.allergens) ? item.allergens.join(", ") : "",
   } : {
     name: '',
     description: '',
     price: '',
     category: 'mains',
     allergens: '',
+    ingredients: '',
     is_available: true,
     image_url: '',
     ar_model_url: ''
@@ -22,7 +23,7 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
       ? formData.allergens.split(",").map(a => a.trim()).filter(Boolean)
       : formData.allergens || [];
 
-    onSave({ ...formData, allergens });
+    onSave({ ...formData, allergens, ingredients: formData.ingredients });
   };
 
   const inputStyle = {
@@ -100,6 +101,16 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               style={{ ...inputStyle, minHeight: '80px', resize: 'vertical' }}
               placeholder="Describe the dish..."
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Ingredients</label>
+            <textarea
+              value={formData.ingredients}
+              onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+              style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
+              placeholder="e.g., Tomato sauce, mozzarella, basil, olive oil"
             />
           </div>
 

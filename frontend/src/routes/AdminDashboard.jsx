@@ -1,7 +1,7 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Plus, LogOut, Search, BarChart3 } from 'lucide-react';
+import { Plus, LogOut, Search, BarChart3, ChartNoAxesCombined, ChefHat } from 'lucide-react';
 import api from "../api";
 import MenuItemCard from "../components/MenuItemCard";
 import MenuItemForm from "../components/MenuItemForm";
@@ -31,6 +31,8 @@ export default function AdminDashboard() {
   const [editingItem, setEditingItem] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingTables, setEditingTables] = useState(false);
+  const [tableCount, setTableCount] = useState(restaurant?.table_count || 10);
 
   useEffect(() => {
     loadData();
@@ -90,6 +92,20 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error deleting item:", error);
       showToast("Error deleting menu item", "error");
+    }
+  };
+
+  const handleUpdateTables = async () => {
+    try {
+      const response = await api.patch('/api/admin/restaurant', { 
+        table_count: tableCount 
+      });
+      setRestaurant(response.data);
+      setEditingTables(false);
+      showToast('Table count updated successfully', 'success');
+    } catch (error) {
+      console.error('Error updating table count:', error);
+      showToast('Error updating table count', 'error');
     }
   };
 
@@ -153,22 +169,106 @@ export default function AdminDashboard() {
         }}>
           <div>
             <h1 style={{ 
-              margin: '0 0 5px 0', 
+              margin: '0 0 8px 0', 
               fontSize: '28px', 
               fontWeight: '600',
               color: '#212529'
             }}>
               {restaurant?.name}
             </h1>
-            <p style={{ 
-              margin: 0, 
-              color: '#6c757d',
-              fontSize: '14px'
-            }}>
-              {restaurant?.category} • ⭐ {restaurant?.rating}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                padding: '4px 12px',
+                backgroundColor: '#fff3e0',
+                color: '#e65100',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: '500'
+              }}>
+                {restaurant?.category}
+              </span>
+              <span style={{
+                padding: '4px 12px',
+                backgroundColor: '#fff9c4',
+                color: '#f57f17',
+                borderRadius: '20px',
+                fontSize: '13px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                ⭐ {restaurant?.rating}
+              </span>
+            </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          
+          {/* Right side buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => navigate('/admin/orders')}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'white',
+                color: '#495057',
+                border: '1px solid #f57f17',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fff3e0';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              <ChefHat size={16} />
+              Orders
+            </button>
+
+            <button
+              onClick={() => navigate('/admin/analytics')}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'white',
+                color: '#495057',
+                border: '1px solid #f57f17',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#fff3e0';
+                e.target.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'white';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              <ChartNoAxesCombined size={16} />
+              Analytics
+            </button>
+
+            <div style={{ 
+              height: '32px', 
+              width: '1px', 
+              backgroundColor: '#dee2e6' 
+            }} />
+
             <div style={{ textAlign: 'right' }}>
               <p style={{ margin: '0 0 2px 0', fontSize: '11px', color: '#adb5bd', textTransform: 'uppercase' }}>
                 Logged in as
@@ -177,6 +277,7 @@ export default function AdminDashboard() {
                 {user?.email}
               </p>
             </div>
+            
             <button
               onClick={logout}
               style={{
@@ -350,34 +451,88 @@ export default function AdminDashboard() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <button
-                  onClick={() => navigate('/admin/analytics')}
-                  style={{
-                    padding: '10px 18px',
-                    backgroundColor: 'white',
-                    color: '#495057',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = '#f8f9fa';
-                    e.target.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'white';
-                    e.target.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <BarChart3 size={18} />
-                  Analytics
-                </button>
+                {/* Table Count Editor */}
+                {editingTables ? (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={tableCount}
+                      onChange={(e) => setTableCount(parseInt(e.target.value) || 1)}
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #ff6b35',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        width: '80px',
+                        outline: 'none',
+                      }}
+                    />
+                    <button
+                      onClick={handleUpdateTables}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#ff6b35',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTables(false);
+                        setTableCount(restaurant?.table_count || 10);
+                      }}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: 'white',
+                        color: '#495057',
+                        border: '1px solid #dee2e6',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setEditingTables(true)}
+                    style={{
+                      padding: '10px 18px',
+                      backgroundColor: 'white',
+                      color: '#495057',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = '#f8f9fa';
+                      e.target.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'white';
+                      e.target.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    Tables: {restaurant?.table_count || 10}
+                  </button>
+                )}
 
                 <button
                   onClick={handleAddClick}

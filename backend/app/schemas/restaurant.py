@@ -1,5 +1,5 @@
 #backend/app/schemas/restaurant.py
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, Field
 from datetime import datetime
 
 # Schema for restaurants
@@ -10,6 +10,7 @@ class RestaurantBase(BaseModel):
     image: str | None = None
     location: str | None = None
     avg_price_range: str | None = None #eg: "$", "$$", "$$$"
+    table_count: int = Field(default=10, ge=1, le=100)
 
 class RestaurantCreate(RestaurantBase):
     pass
@@ -21,6 +22,7 @@ class RestaurantUpdate(BaseModel):
     image: str | None = None
     location: str | None = None
     avg_price_range: str | None = None
+    table_count: int | None = Field(default=None, ge=1, le=100)
 
 class RestaurantResponse(RestaurantBase):
     id: int

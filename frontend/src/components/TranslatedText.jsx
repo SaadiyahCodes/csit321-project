@@ -7,7 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import {STATIC_TRANSLATIONS} from "../utils/staticTranslations";
 
 export default function TranslatedText({ children }) {
-  const { t, tSync, language } = useLanguage();
+  const { t, tSync, language, isPreloading } = useLanguage();
   const [translated, setTranslated] = useState(() => {
     // Initialize with static or cached value immediately
     if (typeof children !== 'string') return children;
@@ -43,6 +43,8 @@ export default function TranslatedText({ children }) {
         return;
       }
 
+      if (isPreloading) return;
+
       // 3. Fall back to API
       const result = await t(children);
       if (mounted) setTranslated(result);
@@ -50,7 +52,7 @@ export default function TranslatedText({ children }) {
 
     translate();
     return () => { mounted = false; };
-  }, [children, language]);
+  }, [children, language, isPreloading]);
 
   return <>{translated}</>;
 }

@@ -117,7 +117,7 @@ export default function AdminOrders() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: '#fafafa' }}>
-                    {['Order #', 'Date', 'Items', 'Total', 'Status'].map(h => (
+                    {['Order #', 'Date', 'Items', 'Total', 'Status', 'Table', 'Location', 'Phone Number'].map(h => (
                       <th key={h} style={{
                         padding: '12px 24px', fontSize: 11, fontWeight: 700,
                         color: '#9CA3AF', textAlign: 'left',
@@ -174,6 +174,7 @@ export default function AdminOrders() {
                             </div>
                             )}  
                         </td>
+                        
                         <td style={{ padding: '14px 24px', fontSize: 14, fontWeight: 700, color: '#111827' }}>
                           AED {Number(total).toFixed(2)}
                         </td>
@@ -187,6 +188,21 @@ export default function AdminOrders() {
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
                             {s.label}
                           </span>
+                        </td>
+                        <td style={{ padding: '14px 24px', fontSize: 13 }}>
+                            {order.order_type === 'dine_in'
+                                ? order.table_number
+                                    ? order.table_number.toString().toLowerCase().includes('table')
+                                        ? order.table_number
+                                        : `Table ${order.table_number}`
+                                    : '—'
+                                : '—'}
+                        </td>
+                        <td style={{ padding: '14px 24px', fontSize: 13, maxWidth: 200, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                            {order.order_type === 'delivery' ? order.delivery_address || '—' : '—'}
+                        </td>
+                        <td style={{ padding: '14px 24px', fontSize: 13 }}>
+                            {order.phone_number || '—'}
                         </td>
                       </tr>
                     );

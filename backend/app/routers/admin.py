@@ -158,4 +158,9 @@ def get_restaurant_order_history(
     #Get all orders for the admin's restaurant, latest first
     if not current_user.restaurant_id:
         raise HTTPException(status_code=400, detail="No restaurant associated with this admin")
-    return order_history_crud.get_restaurant_order_history(db, current_user.restaurant_id)
+    orders = order_history_crud.get_restaurant_order_history(db, current_user.restaurant_id)
+
+    for order in orders:
+        order.phone_number = order.customer.phone_number if order.customer else None
+
+    return orders

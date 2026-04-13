@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from app.models.selection import Selection, SelectionStatus, SelectionItem
+from app.models.customer import Customer
 
 def get_customer_order_history(db: Session, customer_id: int, skip: int=0, limit: int=100) -> list[Selection]:
     return db.query(Selection).filter(
@@ -23,7 +24,8 @@ def get_restaurant_order_history(db: Session, restaurant_id: int, skip: int=0, l
     return db.query(Selection).filter(
         Selection.restaurant_id == restaurant_id
     ).options(
-        joinedload(Selection.items).joinedload(SelectionItem.menu_item)
+        joinedload(Selection.items).joinedload(SelectionItem.menu_item),
+        joinedload(Selection.customer)
     ).order_by(Selection.created_at.desc()).offset(skip).limit(limit).all()
 
 # link (guest places order then logs in) (later if needed)

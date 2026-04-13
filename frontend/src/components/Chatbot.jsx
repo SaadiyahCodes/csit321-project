@@ -9,6 +9,7 @@ import api from "../api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "./Toast";
 import HandsFreeMode from "./HandsFreeMode";
+import TranslatedText from "./TranslatedText";
 
 export default function Chatbot({ isOpen, onClose, restaurantName }) {
   const { customer, profile } = useCustomerAuth();
@@ -364,7 +365,7 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
         }}
       >
         {/* Header */}
-        <div style={{
+        <div dir="ltr" style={{
           background: "linear-gradient(to right, #f97316, #ea580c)",
           padding: "12px 14px",
           flexShrink: 0,
@@ -417,7 +418,7 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
             color: "rgba(255,255,255,0.8)", margin: "4px 0 0",
             fontSize: "clamp(10px, 2.5vw, 11px)",
           }}>
-            Ask Gusto anything about {restaurantName ?? "the menu"}!
+            <TranslatedText>Ask Gusto anything about</TranslatedText> {restaurantName ?? "the menu"}!
           </p>
         </div>
 

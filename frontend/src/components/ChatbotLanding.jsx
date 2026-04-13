@@ -1,11 +1,12 @@
 // src/components/LandingChatbot.jsx
 import { useState, useEffect, useRef } from "react";
-import { Send, X, Loader2, MapPin, Star, DollarSign, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
+import { Send, X, Loader2, MapPin, Star, DollarSign, Mic, MicOff, Volume2, VolumeX, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "../context/LanguageContext";
 import api from "../api";
 import LanguageSelector from "./LanguageSelector";
 import HandsFreeMode from "./HandsFreeMode";
+import TranslatedText from "./TranslatedText";
 
 export default function LandingChatbot({ isOpen, onClose }) {
   const navigate = useNavigate();
@@ -355,10 +356,10 @@ export default function LandingChatbot({ isOpen, onClose }) {
         >
           <div style={{ flex: 1 }}>
             <h2 style={{ color: "white", fontSize: "18px", fontWeight: "bold", margin: 0 }}>
-              Gusto AI Assistant
+              Gusto Recommends
             </h2>
             <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "11px", margin: "2px 0 0 0" }}>
-              Find your perfect restaurant!
+              <TranslatedText>Find your perfect restaurant!</TranslatedText>
             </p>
           </div>
 
@@ -453,20 +454,22 @@ export default function LandingChatbot({ isOpen, onClose }) {
                   display: "inline-block",
                 }}
               >
-                <p style={{ fontSize: "14px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
-                  👋{" "}
-                  {language === "ar"
-                    ? "مرحباً! أنا مساعدك لاختيار المطعم"
-                    : language === "ur"
-                      ? "ہیلو! میں آپ کا ریستوران گائیڈ ہوں"
-                      : language === "hi"
-                        ? "नमस्ते! मैं आपका रेस्तरां सहायक हूं"
-                        : language === "es"
-                          ? "¡Hola! Soy tu guía de restaurantes"
-                          : language === "fr"
-                            ? "Bonjour! Je suis votre guide restaurant"
-                            : "Hi! I'm your dining concierge"}
-                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 8 }}>
+                  <Bot size={20} color="#f97316" />
+                  <p style={{ fontSize: "14px", fontWeight: "600", color: "#374151", margin: 0}}>
+                    {language === "ar"
+                      ? "مرحباً! أنا مساعدك لاختيار المطعم"
+                      : language === "ur"
+                        ? "ہیلو! میں آپ کا ریستوران گائیڈ ہوں"
+                        : language === "hi"
+                          ? "नमस्ते! मैं आपका रेस्तरां सहायक हूं"
+                          : language === "es"
+                            ? "¡Hola! Soy tu guía de restaurantes"
+                            : language === "fr"
+                              ? "Bonjour! Je suis votre guide restaurant"
+                              : "Hi! I'm your dining concierge"}
+                  </p>
+                </div>
                 <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
                   {language === "ar"
                     ? "أخبرني عن ميزانيتك أو موقعك أو نوع المطبخ وسأجد لك المكان المثالي!"

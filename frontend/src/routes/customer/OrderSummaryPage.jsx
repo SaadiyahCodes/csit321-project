@@ -331,7 +331,7 @@ export default function OrderSummaryPage() {
               }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                   <span style={{ fontSize: 15, fontWeight: 600, color: "#111" }}>
-                    {item.menu_item?.name ?? item.name}
+                    <TranslatedText>{item.menu_item?.name ?? item.name}</TranslatedText>
                     <span style={{ color: "#9ca3af", fontWeight: 500, marginLeft: 6 }}>× {item.quantity}</span>
                   </span>
                   {item.notes && (

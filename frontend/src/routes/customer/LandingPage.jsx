@@ -193,7 +193,7 @@ function TopNav({ customer }) {
               onMouseEnter={(e) => e.currentTarget.style.background = "rgba(249, 115, 22, 0.05)"}
               onMouseLeave={(e) => e.currentTarget.style.background = "none"}
             >
-              Restaurants
+              <TranslatedText>Restaurants</TranslatedText>
             </button>
             <button
               onClick={() => { scrollTo("about"); setMobileMenuOpen(false); }}
@@ -212,7 +212,7 @@ function TopNav({ customer }) {
               onMouseEnter={(e) => e.currentTarget.style.background = "rgba(249, 115, 22, 0.05)"}
               onMouseLeave={(e) => e.currentTarget.style.background = "none"}
             >
-              About
+              <TranslatedText>About</TranslatedText>
             </button>
           </div>
         )}
@@ -467,7 +467,7 @@ function Hero({ onScrollDown }) {
             padding: 8,
           }}
         >
-          EXPLORE
+          <TranslatedText>EXPLORE</TranslatedText>
           <ChevronDown size={16} />
         </button>
       </div>
@@ -516,7 +516,7 @@ const FEATURES = [
     title: "Smart Voice Support",
     subtitle: "Accessibility is at the table",
     accent: "#4CAF50",
-    description: <>Speak with Gusto using voice and haptic feedback.<br/>Everyone deserves to navigate ordering on their own.</>,
+    description: "Speak with Gusto using voice and haptic feedback. Everyone deserves to navigate ordering on their own.",
     illustration: (
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
         <img
@@ -531,7 +531,7 @@ const FEATURES = [
     title: "Smart AI Chatbot",
     subtitle: "Your personal food guide",
     accent: "#F28C28",
-    description: <>An AI assistant that knows every menu AND your allergen profile.<br/>Set your profile once and dine safe every time.</>,
+    description: "An AI assistant that knows every menu AND your allergen profile. Set your profile once and dine safe every time.",
     illustration: (
       <img
         src={aboutAllergy}
@@ -544,7 +544,7 @@ const FEATURES = [
     title: "AR Food Preview",
     subtitle: "See before you eat",
     accent: "#5C8DCA",
-    description: <>See a life-sized photorealistic preview of your dish before ordering.<br/>Know exactly what you're getting.</>,
+    description: "See a life-sized photorealistic preview of your dish before ordering. Know exactly what you're getting.",
     illustration: (
       <img
         src={aboutAR}
@@ -588,16 +588,16 @@ function AboutSection() {
     <section id="about" style={{ background: "#fff8f0", padding: "80px 20px 100px" }}>
       <Reveal>
         <div style={{ maxWidth: 1200, margin: "0 auto", marginBottom: 52 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+          <div dir="ltr" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#f97316,#ea580c)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Sparkles size={18} color="white" />
             </div>
-            <h2 style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#111", margin: 0 }}>
+            <h2 dir="auto" style={{ fontSize: "clamp(22px,3vw,32px)", fontWeight: 800, color: "#111", margin: 0 }}>
               <TranslatedText>About Gusto</TranslatedText>
             </h2>
           </div>
-          <p style={{ fontSize: 16, color: "#93851e", margin: 10 }}>
-            <TranslatedText>Features that make every meal <strong>safer</strong>, <strong>easier</strong>, and more <strong>delicious</strong>.</TranslatedText>
+          <p dir="ltr" style={{ fontSize: 16, color: "#93851e", margin: 10, fontWeight: 600 }}>
+            <TranslatedText>Features that make every meal safer, easier, and more delicious.</TranslatedText>
           </p>
         </div>
       </Reveal>
@@ -634,24 +634,24 @@ function AboutSection() {
                   gap: 12,
                 }}>
                   {/* Header */}
-                  <div style={{ textAlign: "center" }}>
+                  <div dir="ltr" style={{ textAlign: "center" }}>
                     {f.subtitle && (
-                      <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>
+                      <p dir="auto" style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: f.accent }}>
                         <TranslatedText>{f.subtitle}</TranslatedText>
                       </p>
                     )}
-                    <h3 style={{ margin: 0, fontSize: "clamp(16px,2.5vw,21px)", fontWeight: 800, color: "#111" }}>
+                    <h3 dir="auto" style={{ margin: 0, fontSize: "clamp(16px,2.5vw,21px)", fontWeight: 800, color: "#111" }}>
                       <TranslatedText>{f.title}</TranslatedText>
                     </h3>
                   </div>
 
                   {/* Body */}
-                  <div className="about-card-body" style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
+                  <div className="about-card-body" dir="ltr" style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
                     <div className="about-card-img" style={{ flex: 1, minWidth: 0, overflow: "hidden", borderRadius: 12, minHeight: 0 }}>
                       {f.illustration}
                     </div>
-                    <div className="about-card-text" style={{ flex: 1, display: "flex", alignItems: "flex-start", paddingTop: 8 }}>
-                      <p style={{ fontSize: 13, color: "#000000", lineHeight: 1.8, margin: 0 }}>
+                    <div className="about-card-text" style={{ flex: 1, display: "flex", alignItems: "center", paddingTop: 8 }}>
+                      <p dir="auto" style={{ fontSize: 13, color: "#000000", lineHeight: 1.8, margin: 0, width: "100%" }}>
                         <TranslatedText>{f.description}</TranslatedText>
                       </p>
                     </div>
@@ -662,7 +662,7 @@ function AboutSection() {
           </div>
 
           {/* Controls */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 24 }}>
+          <div dir="ltr" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, marginTop: 24 }}>
             <button onClick={goToPrev} style={navBtnStyle}><ChevronLeft size={18} /></button>
             <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
               {FEATURES.map((_, i) => (
@@ -707,7 +707,7 @@ function AboutSection() {
 
 // ── Main LandingPage ──────────────────────────────────────────────────────────
 export default function LandingPage() {
-  const { tSync } = useLanguage();
+  const { tSync, language } = useLanguage();
   const { customer } = useCustomerAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [restaurants, setRestaurants] = useState([]);
@@ -774,6 +774,7 @@ export default function LandingPage() {
             }}>
               <Search size={15} style={{ color: "#f97316", flexShrink: 0 }} />
               <input
+                key={language}
                 style={{ flex: 1, outline: "none", fontSize: 14, border: "none", background: "transparent", color: "#111" }}
                 placeholder={tSync("Search restaurants…")}
                 value={searchQuery}

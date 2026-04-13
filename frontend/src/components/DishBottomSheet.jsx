@@ -146,9 +146,9 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                 color: "#f97316", fontSize: 14, fontWeight: 600, cursor: "pointer",
               }}>
                 <span style={{ fontSize: 16 }}>⤢</span>
-                AR Preview
+                <TranslatedText>AR Preview</TranslatedText>
                 {!isLikelyARCapable() && (
-                  <span style={{ fontSize: 12, color: "#fb923c", fontWeight: 400 }}>· Mobile Only</span>
+                  <span style={{ fontSize: 12, color: "#fb923c", fontWeight: 400 }}>· <TranslatedText>Mobile Only</TranslatedText></span>
                 )}
               </button>
             </div>
@@ -165,7 +165,7 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                       <TranslatedText>Category</TranslatedText>:
                     </span>
                     <span style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.5 }}>
-                      {capitalize(item.category)}
+                      <TranslatedText>{capitalize(item.category)}</TranslatedText>
                     </span>
                   </div>
                 )}
@@ -195,7 +195,9 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                       border: "1.5px solid #fca5a5",
                       padding: "5px 14px", borderRadius: 999,
                       fontSize: 13, fontWeight: 500, textTransform: "capitalize",
-                    }}>{a}</span>
+                    }}>
+                      <TranslatedText>{a}</TranslatedText>
+                    </span>
                   ))}
                 </div>
               ) : (

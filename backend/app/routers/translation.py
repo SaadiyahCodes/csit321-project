@@ -28,6 +28,10 @@ class BatchTranslateRequest(BaseModel):
     target_lang: str
     source_lang: str = "en"
 
+class UIBatchTranslateRequest(BaseModel):
+    texts: List[str]
+    target_lang: str
+
 @router.post("/text")
 def translate_text(req: TranslateRequest):
     """Single text translation"""
@@ -95,3 +99,19 @@ def clear_cache():
     """Clear translation cache"""
     translation_service.clear_cache()
     return {"message": "Cache cleared"}
+
+@router.post("/batch-ui")
+def translate_ui_batch(req: UIBatchTranslateRequest):
+    """Batch translate plain UI strings (not menu items)"""
+    results = {}
+    for text in req.texts:
+        if not text or not text.strip():
+            continue
+        result = translation_service.translate_text(
+            text, req.target_lang, use_gemini=False
+        )
+        if result.get("success"):
+            results[text] = result["translated_text"]
+        else:
+            results[text] = text  # fallback to original
+    return {"translations": results, "target_lang": req.target_lang}

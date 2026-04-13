@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import TranslatedText from "./TranslatedText";
 
 export default function RestaurantCard({ restaurant }) {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export default function RestaurantCard({ restaurant }) {
         </h3>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: "12px", color: "#6b7280" }}>
-            {restaurant.category}
+            <TranslatedText>{restaurant.category}</TranslatedText>
           </span>
           <span style={{
             fontSize: "12px", backgroundColor: "#ffedd5", color: "#ea580c",

@@ -1,6 +1,9 @@
 # Gusto by Team InnoVision
 Capstone Project README File
 
+## Youtube Demo Link
+https://youtu.be/0LE3cTJYHuc
+
 ## Tech Stack
 
 - Backend: FastAPI, PostgreSQL (NeonDB), SQLAlchemy, Alembic

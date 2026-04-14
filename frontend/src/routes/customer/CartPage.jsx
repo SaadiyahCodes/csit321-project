@@ -314,34 +314,34 @@ export default function CartPage() {
                     justifyContent: "space-between", marginTop: "auto", paddingTop: 4,
                   }}>
                     <div style={{
-                      display: "flex", alignItems: "center", gap: 10,
-                      background: "#fff7ed", borderRadius: 999, padding: "5px 10px",
+                      display: "flex", alignItems: "center", gap: "clamp(6px, 1.5vw, 10px)",
+                      background: "#fff7ed", borderRadius: 999, padding: "clamp(4px, 1vw, 5px) clamp(8px, 2vw, 10px)",
                     }}>
                       <button
                         onClick={() => updateQuantity(item.id, qty - 1)}
                         style={{
-                          width: 30, height: 30, borderRadius: "50%",
+                          width: "clamp(24px, 6vw, 30px)", height: "clamp(24px, 6vw, 30px)", borderRadius: "50%",
                           background: qty === 1 ? "#e5e7eb" : "#f97316",
                           border: "none", cursor: qty === 1 ? "default" : "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           color: qty === 1 ? "#9ca3af" : "white",
                         }}
-                      ><Minus size={13} /></button>
-                      <span style={{ fontWeight: 800, fontSize: 16, color: "#111", minWidth: 18, textAlign: "center" }}>
+                      ><Minus size={13} style={{ width: "clamp(11px, 2.5vw, 13px)", height: "clamp(11px, 2.5vw, 13px)" }} /></button>
+                      <span style={{ fontWeight: 800, fontSize: "clamp(14px, 3.5vw, 16px)", color: "#111", minWidth: "clamp(14px, 3.5vw, 18px)", textAlign: "center" }}>
                         {qty}
                       </span>
                       <button
                         onClick={() => updateQuantity(item.id, qty + 1)}
                         style={{
-                          width: 30, height: 30, borderRadius: "50%",
+                          width: "clamp(24px, 6vw, 30px)", height: "clamp(24px, 6vw, 30px)", borderRadius: "50%",
                           background: "#f97316", border: "none", cursor: "pointer",
                           display: "flex", alignItems: "center", justifyContent: "center",
                           color: "white",
                         }}
-                      ><Plus size={13} /></button>
+                      ><Plus size={13} style={{ width: "clamp(11px, 2.5vw, 13px)", height: "clamp(11px, 2.5vw, 13px)"}} /></button>
                     </div>
 
-                    <span style={{ fontSize: 17, fontWeight: 800, color: "#111" }}>
+                    <span style={{ fontSize: "clamp(15px, 3.8vw, 17px)", fontWeight: 800, color: "#111" }}>
                       {itemTotal} AED
                     </span>
                   </div>
@@ -355,7 +355,7 @@ export default function CartPage() {
         <div style={{
           background: "white", borderRadius: 24,
           boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          padding: "22px 24px",
+          padding: "22px 24px", marginBottom: 5
         }}>
           <h2 style={{ fontSize: 17, fontWeight: 800, color: "#111", margin: "0 0 16px" }}>
             <TranslatedText>Order Summary</TranslatedText>

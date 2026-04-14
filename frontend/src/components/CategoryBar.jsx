@@ -20,6 +20,7 @@ export default function CategoryBar({ active, onChange }) {
           <button
             key={c.id}
             onClick={() => onChange(c.id)}
+            style={{ width: "18%" }}
             className="flex flex-col items-center gap-2 transition-all duration-300 active:scale-80 hover:scale-85 hover:-translate-y-1"
           >
             <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
@@ -27,9 +28,9 @@ export default function CategoryBar({ active, onChange }) {
             }`}>
               <Icon size={22} className="text-orange-600 transition-colors duration-300" />
             </div>
-            <span className={`text-xs font-medium transition-all duration-300 ${
+            <span className={`font-medium transition-all duration-300 w-full text-center leading-tight ${
               isActive ? "text-white font-bold" : "text-white"
-            }`}>
+            }`} style={{ fontSize: "clamp(9px, 1.8vw, 12px)" }}>
               <TranslatedText>{c.label}</TranslatedText>
             </span>
           </button>

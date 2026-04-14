@@ -346,7 +346,7 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
       />
 
       {/* Chatbot Panel */}
-      <div
+      <div dir="ltr"
         style={{
           position: "fixed",
           bottom: "80px",

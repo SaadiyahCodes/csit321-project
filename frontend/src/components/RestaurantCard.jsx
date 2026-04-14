@@ -1,6 +1,5 @@
 //src/components/RestaurantCard.jsx
 import { useState } from "react";
-import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import TranslatedText from "./TranslatedText";
 
@@ -36,18 +35,6 @@ export default function RestaurantCard({ restaurant }) {
             transition: "transform 0.3s ease",
           }}
         />
-        <button
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: "absolute", top: "8px", right: "8px",
-            backgroundColor: "rgba(255,255,255,0.9)",
-            borderRadius: "50%", width: "28px", height: "28px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: "none", cursor: "pointer",
-          }}
-        >
-          <Heart size={14} style={{ color: "#4b5563" }} />
-        </button>
       </div>
 
       <div style={{ padding: "12px" }}>

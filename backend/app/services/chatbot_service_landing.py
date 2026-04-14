@@ -11,6 +11,9 @@ from app.models.restaurant import Restaurant
 
 load_dotenv()
 
+def normalize(name: str) -> str:
+    return name.strip().lower()
+
 class ChatbotServiceLanding:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
@@ -66,16 +69,12 @@ class ChatbotServiceLanding:
 
     # Prompt
     def build_prompt(self, restaurants: list[dict]) -> str:
-        restaurant_text = "\n".join([
-            f"- {r['name']} | (Cuisine: {r['category']} | Rating: {r['rating']}" 
-            f"| Location: {r['location']} | Price range: {r['avg_price_range']}"
-            for r in restaurants
-        ])
+        restaurant_json = json.dumps(restaurants, indent=2)
 
         return f"""You are Gusto AI, a friendly dining concierge on the Gusto restaurant discovery platform.
 
 AVAILABLE RESTAURANTS:
-{restaurant_text}
+{restaurant_json}
 
 PRICE RANGE GUIDE:
 - $: Budget-friendly
@@ -110,6 +109,8 @@ Always respond with valid JSON only, no text outside the JSON:
 }}
 
 FIELD RULES:
+- "name" MUST EXACTLY match one of the restaurant names provided (character-for-character)
+- Do NOT modify, shorten, or rephrase restaurant names
 - "response": natural, friendly text — no emojis, no markdown
 - "suggested_restaurants": restaurants you are recommending in this turn. Empty list [] if just chatting or asking a clarifying question.
 - "suggested_restaurants": ONLY include restaurants you are recommending FOR THE FIRST TIME in this turn. If the user is confirming, asking follow-up questions, or you already suggested these restaurants in a previous turn, return []
@@ -119,7 +120,7 @@ EXAMPLE:
 User: "Looking for something cheap and Italian near the Marina"
 ->
 {{
-    "response": "Based on what we have near the marina, I would suggest Pizza Haven. It is an affordable Italian spot with a 4.1 rating. Want me to suggest alternatives as well?",
+    "response": "Based on what we have near the marina, I would suggest Pizza Haven. It is an affordable Italian spot with a 4.1 rating.",
     "suggested_restaurants": [
         {{"id": 5, "name": "Pizza Haven", "reason": "Budget-friendly Italian near the marina with great ratings"}}
     ]
@@ -176,13 +177,28 @@ User: "Looking for something cheap and Italian near the Marina"
             ai_message = parsed.get("response", raw_text)
 
             # Enrich suggested restaurants with full details from our cached data
-            restaurant_map = {r["id"]: r for r in restaurants}
+            #Build maps
+            restaurant_map_by_id = {r["id"]: r for r in restaurants}
+            restaurant_map_by_name = {normalize(r["name"]): r for r in restaurants}
+
             enriched = []
             for s in parsed.get("suggested_restaurants", []):
-                rid = s.get("id")
-                if rid and rid in restaurant_map:
+                r = None
+                # Try name match first
+                name = s.get("name")
+                if name:
+                    r = restaurant_map_by_name.get(normalize(name))
+
+                # Fallback to ID
+                if not r:
+                    rid = s.get("id")
+                    if rid in restaurant_map_by_id:
+                        r = restaurant_map_by_id[rid]
+
+                # Final alignment check with response text
+                if r and r["name"] in ai_message:
                     enriched.append({
-                        **restaurant_map[rid],
+                        **r,
                         "reason": s.get("reason", ""),
                     })
 

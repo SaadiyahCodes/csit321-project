@@ -182,12 +182,6 @@ Return ONLY the translation, nothing else."""
         for i, item in enumerate(items):
             print(f"🔍 Translating item {i+1}/{len(items)}: {item.get('name', 'NO NAME')}")
             
-            name_result = self.translate_text(
-                item.get("name", ""), 
-                target_lang,
-                use_gemini=use_gemini
-            )
-            
             desc_result = self.translate_text(
                 item.get("description", ""), 
                 target_lang,
@@ -219,7 +213,7 @@ Return ONLY the translation, nothing else."""
 
             translated_item = {
                 **item,
-                "name": name_result.get("translated_text", item.get("name")),
+                "name": item.get("name"),
                 "description": desc_result.get("translated_text", item.get("description")),
                 "category": category_result.get("translated_text", category),
                 "ingredients": ingredients_result.get("translated_text", ingredients),

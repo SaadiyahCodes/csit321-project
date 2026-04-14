@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
+import { MessageSquare, ShoppingCart, TrendingUp, DollarSign, 
+         AlertCircle, AlertTriangle, CheckCircle, Bot } from 'lucide-react';
 
 
 // ── Rule-based AI summary ─────────────────────────────────────────────────────
@@ -389,7 +391,7 @@ function TopMenuItems({ data }) {
                   borderRadius: 99,
                   whiteSpace: 'nowrap',
                 }}>
-                  🤖 {item.chatbot_percent}%
+                  <Bot size={11} color="white" style={{display:'inline', verticalAlign:'middle', marginRight:3}}/>{item.chatbot_percent}%
                 </div>
                 <span style={{ fontSize: 11, color: '#9CA3AF' }}>{item.chatbot_orders} via bot</span>
               </>
@@ -461,7 +463,7 @@ function KPICard({ title, value, subtitle, icon, accent, onClick }) {
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}88)` }} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>{title}</span>
-        <span style={{ fontSize: 22, lineHeight: 1, background: `${accent}18`, padding: '6px 8px', borderRadius: 8 }}>{icon}</span>
+        <span style={{ background: `${accent}18`, padding: '6px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
       </div>
       <div style={{ fontSize: 32, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
       {subtitle && <div style={{ marginTop: 8, fontSize: 12, color: accent, fontWeight: 600 }}>{subtitle}</div>}
@@ -665,9 +667,9 @@ export default function AdminAnalytics() {
               {data.alerts.map((alert, index) => (
                 <div key={index} style={{ padding: '14px 18px', background: '#fff', border: '1px solid #E5E7EB', borderLeft: `4px solid ${alert.severity === 'red' ? '#EF4444' : alert.severity === 'yellow' ? '#F59E0B' : '#10B981'}`, borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
                   <div style={{ marginTop: 1 }}>
-                    {alert.severity === 'red' && <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#EF4444" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    {alert.severity === 'yellow' && <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#F59E0B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>}
-                    {alert.severity === 'green' && <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#10B981" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                    {alert.severity === 'red' && <AlertCircle size={20} color="#EF4444" style={{flexShrink:0, marginTop:1}} />}
+                    {alert.severity === 'yellow' && <AlertTriangle size={20} color="#F59E0B" style={{flexShrink:0, marginTop:1}} />}
+                    {alert.severity === 'green' && <CheckCircle size={20} color="#10B981" style={{flexShrink:0, marginTop:1}} />}
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827' }}>{alert.title}</p>
@@ -681,9 +683,9 @@ export default function AdminAnalytics() {
 
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            <KPICard title="Total Conversations" value={data?.kpi?.total_conversations || 0} icon="💬" accent="#F97316" />
-            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} icon="🛒" accent="#EA580C" onClick={() => navigate('/admin/orders')}/>
-            <KPICard title="Conversion Rate" value={`${data?.kpi?.conversion_rate || 0}%`} icon="📈" accent="#F59E0B" />
+            <KPICard title="Total Conversations" value={data?.kpi?.total_conversations || 0} icon={<MessageSquare size={18} color="#F97316"/>} accent="#F97316" />
+            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} icon={<ShoppingCart size={18} color="#EA580C"/>} accent="#EA580C" onClick={() => navigate('/admin/orders')}/>
+            <KPICard title="Conversion Rate" value={`${data?.kpi?.conversion_rate || 0}%`} icon={<TrendingUp size={18} color="#F59E0B"/>} accent="#F59E0B" />
             <div style={{ position: 'relative' }}>
               <KPICard
                 title="Avg Order Value"
@@ -693,7 +695,7 @@ export default function AdminAnalytics() {
                   const pct = baseline > 0 ? round(((aov - baseline) / baseline) * 100, 1) : 0;
                   return `${pct >= 0 ? '+' : ''}${pct}% vs $${baseline} baseline`;
                 })()}
-                icon="💰"
+                icon={<DollarSign size={18} color="#FBBF24"/>}
                 accent="#FBBF24"
               />
               <button

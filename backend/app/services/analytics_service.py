@@ -49,7 +49,7 @@ class AnalyticsService:
         #logs
         print(f"🔍 Sessions: {total_sessions}, Orders: {total_orders}, Convs: {total_convs}")
 
-        conversion = (total_orders / total_convs * 100) if total_convs > 0 else 0
+        conversion = (total_orders / total_sessions * 100) if total_sessions > 0 else 0
         
         # 4. Average order value
         subquery = self.db.query(

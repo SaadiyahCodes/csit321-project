@@ -208,7 +208,8 @@ class ChatHandler:
                 session_id=session_id,
                 role="assistant",
                 content=result["response"],  # translated response
-                intent=None
+                intent=None,
+                items_rejected_count=len(result.get("intent", {}).get("items_rejected", []))
             )
             db.add(assistant_msg)
 

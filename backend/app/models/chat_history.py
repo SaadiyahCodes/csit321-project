@@ -18,4 +18,5 @@ class ChatHistory(Base):
     content = Column(Text, nullable=False)
     intent = Column(Enum(IntentType), nullable=True)
     extracted_allergens = Column(JSONB, nullable=True)
+    items_rejected_count = Column(Integer, nullable=True, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

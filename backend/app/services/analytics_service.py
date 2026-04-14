@@ -1,4 +1,4 @@
-from sqlalchemy import func, distinct
+from sqlalchemy import func, distinct, cast, String, tuple_
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from app.models.session import CustomerSession
@@ -10,7 +10,7 @@ from app.models.analytics import ChatAnalytics, UpsellAnalytics
 
 
 class AnalyticsService:
-    
+
     def __init__(self, db: Session):
         self.db = db
     
@@ -77,12 +77,25 @@ class AnalyticsService:
 
         # 7. Orders originating from chatbot
         chatbot_order_count = self.db.query(
-            func.count(ChatbotOrder.id)
+            func.count(distinct(
+                func.concat(ChatbotOrder.session_id, '-', ChatbotOrder.menu_item_id)
+            ))
         ).join(
             CustomerSession, CustomerSession.session_id == ChatbotOrder.session_id
         ).filter(
             CustomerSession.restaurant_id == restaurant_id,
             ChatbotOrder.confirmed_at >= start_date
+        ).scalar() or 0
+
+        #8. allergen blocks count
+        allergen_blocks_count = self.db.query(
+            func.coalesce(func.sum(ChatHistory.items_rejected_count), 0)
+        ).join(
+            CustomerSession, CustomerSession.session_id == ChatHistory.session_id
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            ChatHistory.role == 'assistant',
+            ChatHistory.created_at >= start_date
         ).scalar() or 0
         
         return {
@@ -93,7 +106,10 @@ class AnalyticsService:
             "manual_aov": manual_aov,
             "aov_increase_percent": round(((chatbot_aov - manual_aov) / manual_aov) * 100, 1) if manual_aov > 0 else 0,
             "upsell_revenue": round(upsell_revenue, 2),
-            "chatbot_order_count": chatbot_order_count
+            "chatbot_order_count": chatbot_order_count,
+            "chatbot_penetration": round((chatbot_order_count / total_orders * 100), 1) if total_orders > 0 else 0,
+            "chatbot_order_count": chatbot_order_count,
+            "allergen_blocks": allergen_blocks_count,
         }
     
     def get_top_questions(self, restaurant_id: int, days: int = 7):
@@ -354,3 +370,48 @@ class AnalyticsService:
             })
         
         return alerts
+    
+    def get_language_order_breakdown(self, restaurant_id: int, days: int = 7):
+        """Orders and conversion per language"""
+        start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days - 1)
+
+        lang_names = {
+            'en': 'English', 'ar': 'Arabic', 'hi': 'Hindi',
+            'ur': 'Urdu', 'es': 'Spanish', 'fr': 'French'
+        }
+
+        # Sessions per language
+        session_rows = self.db.query(
+            CustomerSession.language,
+            func.count(CustomerSession.session_id).label('sessions')
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            CustomerSession.created_at >= start_date
+        ).group_by(CustomerSession.language).all()
+
+        # Orders per language (via session join)
+        order_rows = self.db.query(
+            CustomerSession.language,
+            func.count(Selection.id).label('orders')
+        ).join(
+            Selection, Selection.session_id == CustomerSession.session_id  # check if this join exists in your schema
+        ).filter(
+            CustomerSession.restaurant_id == restaurant_id,
+            Selection.status == 'finalized',
+            Selection.created_at >= start_date
+        ).group_by(CustomerSession.language).all()
+
+        order_map = {row.language: row.orders for row in order_rows}
+
+        result = []
+        for row in session_rows:
+            sessions = row.sessions
+            orders = order_map.get(row.language, 0)
+            result.append({
+                "language": row.language,
+                "name": lang_names.get(row.language, row.language),
+                "value": sessions,
+                "orders": orders,
+                "conversion": round((orders / sessions * 100), 1) if sessions > 0 else 0
+            })
+        return result

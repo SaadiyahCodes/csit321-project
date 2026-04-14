@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { analyticsService } from '../services/analyticsService';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
-import { MessageSquare, ShoppingCart, TrendingUp, DollarSign, 
-         AlertCircle, AlertTriangle, CheckCircle, Bot } from 'lucide-react';
+import { MessageSquare, ShoppingCart, TrendingUp, DollarSign, ShieldCheck,
+         AlertCircle, AlertTriangle, CheckCircle, Bot, Lightbulb, Sparkles, ChevronLeft } from 'lucide-react';
 
 
 // ── Rule-based AI summary ─────────────────────────────────────────────────────
@@ -210,95 +210,111 @@ function TimelineChart({ data }) {
 // ── SVG Donut Chart ───────────────────────────────────────────────────────────
 function DonutChart({ data }) {
   const [hovered, setHovered] = useState(null);
+  const [selected, setSelected] = useState(null);
 
-  if (!data || data.length === 0) {
-    return <EmptyState label="No language data yet" />;
-  }
+  if (!data || data.length === 0) return <EmptyState label="No language data yet" />;
 
   const palette = ['#F97316', '#EA580C', '#F59E0B', '#FBBF24', '#FCD34D'];
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
   const R = 56, r = 32, cx = 72, cy = 72;
 
-  // Build arcs
   let cumAngle = -Math.PI / 2;
   const slices = data.map((d, i) => {
     const angle = (d.value / total) * 2 * Math.PI;
     const startA = cumAngle;
     const endA = cumAngle + angle;
     cumAngle = endA;
-
     const x1 = cx + R * Math.cos(startA), y1 = cy + R * Math.sin(startA);
     const x2 = cx + R * Math.cos(endA),   y2 = cy + R * Math.sin(endA);
     const ix1 = cx + r * Math.cos(startA), iy1 = cy + r * Math.sin(startA);
     const ix2 = cx + r * Math.cos(endA),   iy2 = cy + r * Math.sin(endA);
     const large = angle > Math.PI ? 1 : 0;
-
     const path = `M${x1.toFixed(2)},${y1.toFixed(2)} A${R},${R} 0 ${large},1 ${x2.toFixed(2)},${y2.toFixed(2)} L${ix2.toFixed(2)},${iy2.toFixed(2)} A${r},${r} 0 ${large},0 ${ix1.toFixed(2)},${iy1.toFixed(2)} Z`;
     return { ...d, path, color: palette[i % palette.length], percent: ((d.value / total) * 100).toFixed(1) };
   });
 
-  const topLang = data.reduce((a, b) => a.value > b.value ? a : b);
-
-  if (data.length === 1) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: palette[0], flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-          <span style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>100%</span>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)' }}>{data[0].value} sessions</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 10, height: 10, borderRadius: 3, background: palette[0] }} />
-            <span style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>{data[0].name}</span>
-            <span style={{ fontSize: 12, color: palette[0], fontWeight: 700 }}>100%</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const active = selected !== null ? slices[selected] : (hovered !== null ? slices[hovered] : null);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-      <svg viewBox="0 0 144 144" style={{ width: 144, height: 144, flexShrink: 0 }}>
-        {slices.map((s, i) => (
-          <path
-            key={i}
-            d={s.path}
-            fill={s.color}
-            stroke="white"
-            strokeWidth="2"
-            style={{
-              cursor: 'pointer',
-              transform: hovered === i ? `scale(1.04)` : 'scale(1)',
-              transformOrigin: `${cx}px ${cy}px`,
-              transition: 'transform 0.15s',
-              opacity: hovered !== null && hovered !== i ? 0.6 : 1,
-            }}
-            onMouseEnter={() => setHovered(i)}
-            onMouseLeave={() => setHovered(null)}
-          />
-        ))}
-        {/* Centre label */}
-        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="13" fontWeight="800" fill="#111827">
-          {hovered !== null ? slices[hovered].percent + '%' : total}
-        </text>
-        <text x={cx} y={cy + 10} textAnchor="middle" fontSize="9" fill="#9CA3AF">
-          {hovered !== null ? slices[hovered].name : 'sessions'}
-        </text>
-      </svg>
+      <div style={{ position: 'relative' }}>
+        <svg viewBox="0 0 144 144" style={{ width: 144, height: 144, flexShrink: 0 }}>
+          {slices.map((s, i) => (
+            <path key={i} d={s.path} fill={s.color} stroke="white" strokeWidth="2"
+              style={{
+                cursor: 'pointer',
+                transform: (hovered === i || selected === i) ? 'scale(1.06)' : 'scale(1)',
+                transformOrigin: `${cx}px ${cy}px`,
+                transition: 'transform 0.15s',
+                opacity: (hovered !== null || selected !== null) && hovered !== i && selected !== i ? 0.5 : 1,
+                outline: selected === i ? `2px solid ${s.color}` : 'none',
+              }}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              onClick={() => setSelected(selected === i ? null : i)}
+            />
+          ))}
+          <text x={cx} y={cy - 8} textAnchor="middle" fontSize="13" fontWeight="800" fill="#111827">
+            {active ? active.percent + '%' : total}
+          </text>
+          <text x={cx} y={cy + 7} textAnchor="middle" fontSize="9" fill="#9CA3AF">
+            {active ? active.name : 'sessions'}
+          </text>
+          {active && active.orders !== undefined && (
+            <text x={cx} y={cy + 20} textAnchor="middle" fontSize="9" fill="#F97316" fontWeight="700">
+              {active.conversion}% conv.
+            </text>
+          )}
+        </svg>
+        {selected !== null && (
+          <button onClick={() => setSelected(null)}
+            style={{ position:'absolute', top:-6, right:-6, width:18, height:18, borderRadius:'50%',
+              background:'#6B7280', border:'none', color:'white', fontSize:10, cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center', lineHeight:1 }}>×</button>
+        )}
+      </div>
 
-      {/* Legend */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Breakdown panel when a slice is selected */}
+        {selected !== null && slices[selected].orders !== undefined ? (
+          <div style={{ background: '#FFF7ED', border: `1px solid ${slices[selected].color}40`,
+            borderRadius: 10, padding: '10px 14px', marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#92400E', marginBottom: 6 }}>
+              {slices[selected].name} breakdown
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {[
+                ['Sessions', slices[selected].value],
+                ['Orders', slices[selected].orders],
+                ['Conversion', `${slices[selected].conversion}%`],
+                ['Share', `${slices[selected].percent}%`],
+              ].map(([label, val]) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, color: '#9CA3AF', fontWeight: 600, textTransform: 'uppercase' }}>{label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>Click a slice for breakdown</div>
+        )}
+
         {slices.map((s, i) => (
-          <div
-            key={i}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: hovered !== null && hovered !== i ? 0.5 : 1, transition: 'opacity 0.15s' }}
+          <div key={i}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+              opacity: (hovered !== null || selected !== null) && hovered !== i && selected !== i ? 0.4 : 1,
+              transition: 'opacity 0.15s' }}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
+            onClick={() => setSelected(selected === i ? null : i)}
           >
             <div style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: '#374151', fontWeight: 600, flex: 1 }}>{s.name}</span>
             <span style={{ fontSize: 12, color: s.color, fontWeight: 700 }}>{s.percent}%</span>
+            {s.orders !== undefined && (
+              <span style={{ fontSize: 11, color: '#9CA3AF' }}>{s.conversion}% conv</span>
+            )}
           </div>
         ))}
       </div>
@@ -450,23 +466,27 @@ function KPICard({ title, value, subtitle, icon, accent, onClick }) {
         background: '#fff',
         border: '1px solid #F3F4F6',
         borderRadius: 14,
-        padding: '20px 20px 18px',
+        padding: '14px 16px',
         boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
         transition: 'transform 0.15s, box-shadow 0.15s',
         cursor: onClick ? 'pointer' : 'default',
         position: 'relative',
         overflow: 'hidden',
+        minHeight: 110,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
       }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.07)'; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 8px rgba(0,0,0,0.04)'; }}
     >
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${accent}, ${accent}88)` }} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>{title}</span>
-        <span style={{ background: `${accent}18`, padding: '6px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>{title}</span>
+        <span style={{ background: `${accent}18`, padding: '5px 6px', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{icon}</span>
       </div>
-      <div style={{ fontSize: 32, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
-      {subtitle && <div style={{ marginTop: 8, fontSize: 12, color: accent, fontWeight: 600 }}>{subtitle}</div>}
+      <div style={{ fontSize: 30, fontWeight: 800, color: '#111827', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</div>
+      {subtitle && <div style={{ marginTop: 6, fontSize: 11, color: accent, fontWeight: 600 }}>{subtitle}</div>}
     </div>
   );
 }
@@ -674,7 +694,11 @@ export default function AdminAnalytics() {
                   <div>
                     <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#111827' }}>{alert.title}</p>
                     <p style={{ margin: '3px 0 0', fontSize: 13, color: '#6B7280' }}>{alert.message}</p>
-                    {alert.action && <p style={{ margin: '6px 0 0', fontSize: 13, fontWeight: 600, color: '#EA580C' }}>💡 {alert.action}</p>}
+                    {alert.action && 
+                      <p style={{ margin: '6px 0 0', fontSize: 13, fontWeight: 600, color: '#EA580C' }}>
+                        <Lightbulb size={13} color="#EA580C" style={{display:'inline', verticalAlign:'middle', marginRight:4}}/> {alert.action}
+                      </p>
+                    }
                   </div>
                 </div>
               ))}
@@ -682,26 +706,28 @@ export default function AdminAnalytics() {
           )}
 
           {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
-            <KPICard title="Total Conversations" value={data?.kpi?.total_conversations || 0} icon={<MessageSquare size={18} color="#F97316"/>} accent="#F97316" />
-            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} icon={<ShoppingCart size={18} color="#EA580C"/>} accent="#EA580C" onClick={() => navigate('/admin/orders')}/>
-            <KPICard title="Conversion Rate" value={`${data?.kpi?.conversion_rate || 0}%`} icon={<TrendingUp size={18} color="#F59E0B"/>} accent="#F59E0B" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+            <KPICard title="Total Conversations" value={data?.kpi?.total_conversations || 0} subtitle="Chatbot sessions this period" icon={<MessageSquare size={16} color="#F97316"/>} accent="#F97316" />
+            <KPICard title="Total Orders" value={data?.kpi?.total_orders || 0} subtitle="Finalized orders placed" icon={<ShoppingCart size={16} color="#EA580C"/>} accent="#EA580C" onClick={() => navigate('/admin/orders')}/>
+            <KPICard title="Conversion Rate" value={`${data?.kpi?.conversion_rate || 0}%`}
+              icon={<TrendingUp size={16} color="#F59E0B"/>} accent="#F59E0B"
+              subtitle={`${Math.min(data?.kpi?.chatbot_penetration || 0, 100)}% of orders via chatbot`}
+            />
             <div style={{ position: 'relative' }}>
               <KPICard
                 title="Avg Order Value"
-                value={`$${data?.kpi?.chatbot_aov || 0}`}
-                subtitle={(() => {
-                  const aov = data?.kpi?.chatbot_aov || 0;
-                  const pct = baseline > 0 ? round(((aov - baseline) / baseline) * 100, 1) : 0;
+                value={data?.kpi?.chatbot_aov > 0 ? `$${data.kpi.chatbot_aov}` : '—'}
+                subtitle={data?.kpi?.chatbot_aov > 0 ? (() => {
+                  const pct = round(((data.kpi.chatbot_aov - baseline) / baseline) * 100, 1);
                   return `${pct >= 0 ? '+' : ''}${pct}% vs $${baseline} baseline`;
-                })()}
-                icon={<DollarSign size={18} color="#FBBF24"/>}
+                })() : 'No chatbot orders yet'}
+                icon={<DollarSign size={16} color="#FBBF24"/>}
                 accent="#FBBF24"
               />
               <button
                 onClick={() => { setBaselineInput(String(baseline)); setEditingBaseline(true); }}
                 title="Edit baseline"
-                style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 12 }}
+                style={{ position: 'absolute', top: 10, right: 10, background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 12 }}
               >✎</button>
               {editingBaseline && (
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'white', borderRadius: 14, border: '2px solid #F97316', padding: '16px', display: 'flex', flexDirection: 'column', gap: 8, zIndex: 10 }}>
@@ -727,6 +753,13 @@ export default function AdminAnalytics() {
                 </div>
               )}
             </div>
+            <KPICard
+              title="Allergen Blocks"
+              value={data?.kpi?.allergen_blocks || 0}
+              subtitle="Items blocked for safety"
+              icon={<ShieldCheck size={16} color="#EA580C"/>}
+              accent="#EA580C"
+            />
           </div>
 
           {/* Charts Row */}
@@ -773,7 +806,7 @@ export default function AdminAnalytics() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               <div style={{ width: 22, height: 22, borderRadius: 6, background: 'linear-gradient(135deg, #F97316, #EA580C)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <span style={{ fontSize: 11, color: 'white' }}>✦</span>
+                                  <Sparkles size={11} color="white" />
                               </div>
                               <span style={{ fontSize: 12, fontWeight: 700, color: '#92400E', textTransform: 'uppercase', letterSpacing: '0.05em' }}>AI Insight</span>
                           </div>

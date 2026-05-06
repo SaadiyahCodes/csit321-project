@@ -14,6 +14,7 @@ dist/
 
 # API Credentials & Secrets (CRITICAL - NEVER COMMIT!)
 backend/gusto-translation.json
+backend/gusto-sa-translation.json
 *credentials*.json
 .env.local
 .env.*.local

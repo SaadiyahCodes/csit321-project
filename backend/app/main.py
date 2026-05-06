@@ -1,4 +1,6 @@
 import base64, os, tempfile
+from dotenv import load_dotenv
+load_dotenv()
 
 if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
     creds_json = base64.b64decode(os.getenv("GOOGLE_CREDENTIALS_BASE64")).decode()

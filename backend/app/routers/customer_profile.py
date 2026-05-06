@@ -6,6 +6,7 @@ from app.models.customer import Customer
 from app.schemas.customer_profile import ProfileResponse, ProfileUpdate, available_allergens, available_dietary_preferences
 from app.core.dependencies import get_current_active_customer
 from app.crud import customer_profile as profile_crud
+from app.services.translation_service import translation_service
 
 router = APIRouter(prefix="/api/customer/profile", tags=["customer-profile"])
 
@@ -56,8 +57,20 @@ async def update_customer_profile(
 
 # Get available allergens and dietary preferences
 @router.get("/options")
-async def get_profile_options():
+async def get_profile_options(lang: str = "en"):
+    if lang == "en":
+        return {
+            "available_allergens": available_allergens,
+            "available_dietary_preferences": available_dietary_preferences,
+        }
+
+    all_strings = available_allergens + available_dietary_preferences
+    results = {}
+    for text in all_strings:
+        result = translation_service.translate_text(text, lang, use_gemini=False)
+        results[text] = result.get("translated_text", text)
+
     return {
-        "available_allergens": available_allergens,
-        "available_dietary_preferences": available_dietary_preferences
+        "available_allergens": [results.get(a, a) for a in available_allergens],
+        "available_dietary_preferences": [results.get(d, d) for d in available_dietary_preferences],
     }

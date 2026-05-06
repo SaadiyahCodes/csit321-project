@@ -4,11 +4,19 @@ import {useNavigate} from 'react-router-dom';
 import {useCustomerAuth} from '../../context/CustomerAuthContext';
 import api from '../../api';
 import { useToast } from "../../components/Toast";
+import LanguageSelector from "../../components/LanguageSelector";
+import TranslatedText from "../../components/TranslatedText";
+import { useLanguage } from "../../context/LanguageContext";
+
+const ALLERGENS_EN = ["nuts","peanuts","dairy","gluten","shellfish","soy","eggs","fish","wheat","sesame","mustard"];
+const DIETARY_EN = ["vegetarian","vegan","gluten-free","dairy-free","nut-free","halal","kosher","pescatarian","paleo","keto"];
 
 const CustomerProfile = () => {
   const navigate = useNavigate();
+  const { language, t } = useLanguage();
   const { customer, logout, loading: authLoading, setCustomer } = useCustomerAuth();
   const { showToast, ToastContainer } = useToast();
+  const [translatedOrderItems, setTranslatedOrderItems] = useState({});
   const [isEditingAllergens, setIsEditingAllergens] = useState(false);
   const [isEditingDietary, setIsEditingDietary] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,6 +37,8 @@ const CustomerProfile = () => {
   //available options
   const [availableAllergens, setAvailableAllergens] = useState([]);
   const [availableDietaryPrefs, setAvailableDietaryPrefs] = useState([]);
+  const [allergenTranslationMap, setAllergenTranslationMap] = useState({});
+  const [dietaryTranslationMap, setDietaryTranslationMap] = useState({});
   
   //redirect to login if not authenticated
   useEffect(() => {
@@ -44,14 +54,50 @@ const CustomerProfile = () => {
     }
   }, [customer]);
 
+  useEffect(() => {
+    if (!orderHistory.length || language === "en") return;
+    const translateNames = async () => {
+      const map = {};
+      for (const order of orderHistory) {
+        for (const item of order.items || []) {
+          const name = item.menu_item.name;
+          if (!map[name]) map[name] = await t(name);
+        }
+      }
+      setTranslatedOrderItems(map);
+    };
+    translateNames();
+  }, [orderHistory, language]);
+
+  useEffect(() => {
+    if (!customer) return;
+    const fetchOptions = async () => {
+      try {
+        const optionsRes = await api.get(`/api/customer/profile/options?lang=${language}`);
+        setAvailableAllergens(optionsRes.data.available_allergens);
+        setAvailableDietaryPrefs(optionsRes.data.available_dietary_preferences);
+
+        const aMap = {};
+        ALLERGENS_EN.forEach((en, i) => { aMap[en] = optionsRes.data.available_allergens[i]; });
+        setAllergenTranslationMap(aMap);
+
+        const dMap = {};
+        DIETARY_EN.forEach((en, i) => { dMap[en] = optionsRes.data.available_dietary_preferences[i]; });
+        setDietaryTranslationMap(dMap);
+      } catch (err) {
+        console.error("Error fetching options:", err);
+      }
+    };
+    fetchOptions();
+  }, [language, customer]);
+
   // OPTIMIZATION 1: Parallelize all 3 API calls instead of sequential
   const fetchProfileData = async () => {
     try {
       setLoading(true);
 
-      const [profileRes, optionsRes, ordersRes] = await Promise.all([
+      const [profileRes, ordersRes] = await Promise.all([
         api.get('/api/customer/profile/'),
-        api.get('/api/customer/profile/options'),
         api.get('/api/customer/orders/history')
       ]);
 
@@ -60,9 +106,6 @@ const CustomerProfile = () => {
       setTempAllergens(profileRes.data.allergens || []);
       setDietaryPrefs(profileRes.data.dietary_preferences || []);
       setTempDietaryPrefs(profileRes.data.dietary_preferences || []);
-      
-      setAvailableAllergens(optionsRes.data.available_allergens);
-      setAvailableDietaryPrefs(optionsRes.data.available_dietary_preferences);
       
       setOrderHistory(ordersRes.data);
 
@@ -235,28 +278,31 @@ const CustomerProfile = () => {
               fontWeight: 'bold',
               margin: 0
             }}>
-              My Profile
+              <TranslatedText>My Profile</TranslatedText>
             </h1>
           </div>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: 'rgba(255, 255, 255, 0.2)',
-              border: 'none',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <LanguageSelector variant="navbar" />
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              <LogOut size={16} />
+              <TranslatedText>Logout</TranslatedText>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -364,7 +410,7 @@ const CustomerProfile = () => {
                   fontWeight: '600'
                 }}
               >
-                <Edit2 size={16} /> Edit
+                <Edit2 size={16} /> <TranslatedText>Edit</TranslatedText>
               </button>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -385,7 +431,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                  <Save size={16} /> {saving ? <TranslatedText>Saving...</TranslatedText> : <TranslatedText>Save</TranslatedText>}
                 </button>
                 <button
                   onClick={() => setIsEditingInfo(false)}
@@ -404,7 +450,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <X size={16} /> Cancel
+                  <X size={16} /> <TranslatedText>Cancel</TranslatedText>
                 </button>
               </div>
             )}
@@ -431,7 +477,7 @@ const CustomerProfile = () => {
               margin: 0,
               color: '#2d3748'
             }}>
-              Allergen Preferences
+              <TranslatedText>Allergen Preferences</TranslatedText>
             </h3>
             {!isEditingAllergens ? (
               <button
@@ -448,7 +494,7 @@ const CustomerProfile = () => {
                   fontWeight: '600'
                 }}
               >
-                <Edit2 size={16} /> Edit
+                <Edit2 size={16} /> <TranslatedText>Edit</TranslatedText>
               </button>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -469,7 +515,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                  <Save size={16} /> {saving ? <TranslatedText>Saving...</TranslatedText> : <TranslatedText>Save</TranslatedText>}
                 </button>
                 <button
                   onClick={handleCancelAllergens}
@@ -488,7 +534,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <X size={16} /> Cancel
+                  <X size={16} /> <TranslatedText>Cancel</TranslatedText>
                 </button>
               </div>
             )}
@@ -510,11 +556,11 @@ const CustomerProfile = () => {
                       textTransform: 'capitalize'
                     }}
                   >
-                    {allergen}
+                    {allergenTranslationMap[allergen] || allergen}
                   </span>
                 ))
               ) : (
-                <p style={{ color: '#9ca3af', fontSize: '14px' }}>No allergens selected</p>
+                <p style={{ color: '#9ca3af', fontSize: '14px' }}><TranslatedText>No allergens selected</TranslatedText></p>
               )}
             </div>
           ) : (
@@ -624,7 +670,7 @@ const CustomerProfile = () => {
               margin: 0,
               color: '#2d3748'
             }}>
-              Dietary Preferences
+              <TranslatedText>Dietary Preferences</TranslatedText>
             </h3>
             {!isEditingDietary ? (
               <button
@@ -641,7 +687,7 @@ const CustomerProfile = () => {
                   fontWeight: '600'
                 }}
               >
-                <Edit2 size={16} /> Edit
+                <Edit2 size={16} /> <TranslatedText>Edit</TranslatedText>
               </button>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -662,7 +708,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <Save size={16} /> {saving ? 'Saving...' : 'Save'}
+                  <Save size={16} /> {saving ? <TranslatedText>Saving...</TranslatedText> : <TranslatedText>Save</TranslatedText>}
                 </button>
                 <button
                   onClick={handleCancelDietary}
@@ -681,7 +727,7 @@ const CustomerProfile = () => {
                     fontWeight: '600'
                   }}
                 >
-                  <X size={16} /> Cancel
+                  <X size={16} /> <TranslatedText>Cancel</TranslatedText>
                 </button>
               </div>
             )}
@@ -703,11 +749,11 @@ const CustomerProfile = () => {
                       textTransform: 'capitalize'
                     }}
                   >
-                    {pref}
+                    {dietaryTranslationMap[pref] || pref}
                   </span>
                 ))
               ) : (
-                <p style={{ color: '#9ca3af', fontSize: '14px' }}>No dietary preferences selected</p>
+                <p style={{ color: '#9ca3af', fontSize: '14px' }}><TranslatedText>No dietary preferences selected</TranslatedText></p>
               )}
             </div>
           ) : (
@@ -750,7 +796,7 @@ const CustomerProfile = () => {
             marginBottom: '16px',
             color: '#2d3748'
           }}>
-            Order History
+            <TranslatedText>Order History</TranslatedText>
           </h3>
           {orderHistory.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -777,7 +823,7 @@ const CustomerProfile = () => {
                       margin: 0,
                       color: '#2d3748'
                     }}>
-                      Order #{orderHistory.length - index}
+                      <TranslatedText>Order</TranslatedText> #{orderHistory.length - index}
                     </h4>
                     <span style={{
                       backgroundColor: '#dcfce7',
@@ -788,7 +834,7 @@ const CustomerProfile = () => {
                       fontWeight: '600',
                       textTransform: 'capitalize'
                     }}>
-                      {order.status}
+                      <TranslatedText>{order.status.toLowerCase()}</TranslatedText>
                     </span>
                   </div>
                   
@@ -812,7 +858,7 @@ const CustomerProfile = () => {
                     }}>
                       {order.items.map((item, idx) => (
                         <div key={idx} style={{ marginBottom: '4px' }}>
-                          • {item.quantity}x {item.menu_item.name}
+                          • {item.quantity}x {translatedOrderItems[item.menu_item.name] || item.menu_item.name}
                           {item.notes && <span style={{ color: '#9ca3af', fontSize: '13px' }}> - {item.notes}</span>}
                         </div>
                       ))}
@@ -823,7 +869,7 @@ const CustomerProfile = () => {
                       color: '#4b5563',
                       margin: '8px 0'
                     }}>
-                      No items
+                      <TranslatedText>No items</TranslatedText>
                     </p>
                   )}
                   
@@ -839,7 +885,7 @@ const CustomerProfile = () => {
               ))}
             </div>
           ) : (
-            <p style={{ color: '#9ca3af', fontSize: '14px' }}>No orders yet</p>
+            <p style={{ color: '#9ca3af', fontSize: '14px' }}><TranslatedText>No orders yet</TranslatedText></p>
           )}
         </div>
 

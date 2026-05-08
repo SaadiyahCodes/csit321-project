@@ -25,9 +25,6 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(
-    () => localStorage.getItem("voiceReplyEnabled") === "true"
-  );
 
   // Hands Free
   const [handsFreeMode, setHandsFreeMode] = useState(false);
@@ -55,11 +52,6 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
       loadChatHistory();
     }
   }, [isOpen, sessionId]);
-
-  // Persist voice reply toggle
-  useEffect(() => {
-    localStorage.setItem("voiceReplyEnabled", voiceReplyEnabled);
-  }, [voiceReplyEnabled]);
 
   const loadChatHistory = async () => {
     try {
@@ -136,10 +128,6 @@ export default function Chatbot({ isOpen, onClose, restaurantName }) {
 
       setMessages((prev) => [...prev, botMessage]);
 
-      // Speak the reply if voice toggle is on
-      if (voiceReplyEnabled) {
-        await speakText(response.data.response);
-      }
       fetchCartCount();
 
       // Show notification if items were added to cart

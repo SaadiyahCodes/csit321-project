@@ -13,6 +13,7 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
     category: 'mains',
     allergens: '',
     ingredients: '',
+    calories: '',
     is_available: true,
     image_url: '',
     ar_model_url: ''
@@ -114,7 +115,7 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
             <div>
               <label style={labelStyle}>Price *</label>
               <input
@@ -124,6 +125,17 @@ export default function MenuItemForm({ item, onSave, onCancel }) {
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
                 style={inputStyle}
                 placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Calories (kcal)</label>
+              <input
+                type="number"
+                value={formData.calories || ''}
+                onChange={(e) => setFormData({ ...formData, calories: e.target.value ? parseInt(e.target.value) : null })}
+                style={inputStyle}
+                placeholder="e.g. 450"
               />
             </div>
 

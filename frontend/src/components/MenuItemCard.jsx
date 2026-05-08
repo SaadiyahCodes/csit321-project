@@ -99,6 +99,17 @@ export default function MenuItemCard({ item, onEdit, onDelete }) {
           {item.category}
         </div>
 
+        {item.calories && (
+          <div style={{
+            fontSize: '14px',
+            color: '#6c757d',
+            marginBottom: '16px',
+            fontWeight: '500'
+          }}>
+            {item.calories} kcal
+          </div>
+        )}
+
         {/* Availability Status */}
         {item.is_available !== undefined && (
           <div style={{

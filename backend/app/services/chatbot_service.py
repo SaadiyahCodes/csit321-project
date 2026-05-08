@@ -56,7 +56,8 @@ class ChatbotService:
                 "price": float(item.price),
                 "category": item.category or "other",
                 "allergens": item.allergens if item.allergens else [],
-                "ingredients": item.ingredients or ""
+                "ingredients": item.ingredients or "",
+                "calories": item.calories
             }
             for item in menu_items
         ]
@@ -79,8 +80,9 @@ class ChatbotService:
         """Create system prompt with menu context"""
         
         menu_text = "\n".join([
-            f"- {item['name']}: {item['description']} (${item['price']}) "
-            f"[Allergens: {', '.join(item.get('allergens', []))}]"
+            f"- {item['name']}: {item['description']} (${item['price']}"
+            + (f", {item['calories']} kcal" if item.get('calories') else "")
+            + f") [Allergens: {', '.join(item.get('allergens', []))}]"
             for item in menu_items
         ])
         

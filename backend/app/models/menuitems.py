@@ -23,6 +23,7 @@ class MenuItem(Base):
 
     allergens = Column(JSONB, nullable=True)
     ingredients = Column(Text, nullable=True)
+    calories = Column(Integer, nullable=True)
     is_available = Column(Boolean, default=True)
     
     # relationship to restaurant

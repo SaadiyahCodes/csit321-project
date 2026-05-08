@@ -18,6 +18,7 @@ class MenuItemBase(BaseModel):
     category: MenuCategory
     allergens: Optional[List[str]] = []
     ingredients: Optional[str] = None
+    calories: Optional[int] = None
     is_available: bool = True
     image_url: str | None = None
     ar_model_url: str | None = None
@@ -34,6 +35,7 @@ class MenuItemUpdate(BaseModel):
     category: MenuCategory | None = None
     allergens: Optional[List[str]] = None
     ingredients: Optional[str] = None
+    calories: int | None = None
     is_available: bool | None = None
     image_url: str | None = None
     ar_model_url: str | None = None

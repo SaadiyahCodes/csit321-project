@@ -165,8 +165,9 @@ class MenuRAG:
         formatted = []
         for item in items:
             allergen_text = f" (Contains: {', '.join(item.get('allergens', []))})" if item.get('allergens') else ""
+            calorie_text = f" | {item['calories']} kcal" if item.get('calories') else ""
             formatted.append(
-                f"- {item['name']}: {item['description']} - ${item['price']}{allergen_text}"
+                f"- {item['name']}: {item['description']} - ${item['price']} {calorie_text} {allergen_text}"
             )
         
         return "\n".join(formatted)

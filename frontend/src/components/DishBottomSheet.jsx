@@ -170,6 +170,16 @@ export default function DishBottomSheet({ item, onClose, onAddToCart, initialQty
                       </span>
                     </div>
                   )}
+                  {item.calories && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 13, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, color: "#374151", fontSize: 14, flexShrink: 0, width: 90 }}>
+                        <TranslatedText>Calories</TranslatedText>:
+                      </span>
+                      <span style={{ color: "#6b7280", fontSize: 14 }}>
+                        {item.calories} <TranslatedText>kcal</TranslatedText>
+                      </span>
+                    </div>
+                  )}
                   {item.ingredients && (
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 13, marginBottom: 6 }}>
                       <span style={{ fontWeight: 700, color: "#374151", fontSize: 14, flexShrink: 0, width: 90 }}>

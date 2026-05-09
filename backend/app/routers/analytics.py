@@ -69,7 +69,7 @@ DATA: {request.model_dump()}"""
 
     try:
         response = client.models.generate_content(
-            model='models/gemini-2.0-flash-lite',
+            model='models/gemini-flash-latest',
             contents=prompt,
             config={"temperature": 0}
         )

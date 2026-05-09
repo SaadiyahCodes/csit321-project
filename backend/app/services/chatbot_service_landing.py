@@ -22,7 +22,7 @@ class ChatbotServiceLanding:
         api_key = os.getenv("GEMINI_API_KEY")
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'models/gemini-2.0-flash-lite'
+            self.model_name = 'models/gemini-flash-latest'
             self.enabled = True
             print("Landing chatbot service initialized with Gemini API key.")
         else:

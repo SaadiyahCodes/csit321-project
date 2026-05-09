@@ -61,3 +61,15 @@ def delete_conversation(conversation_id: str):
     # Clear conversation history for a given conversation_id
     chatbot_service_landing.clear_conversation(conversation_id)
     return {"message": "Conversation cleared", "conversation_id": conversation_id}
+
+@router.get("/debug/rag")
+def debug_rag(q: str, db: Session = Depends(get_db)):
+    """Test endpoint — remove before submission."""
+    items, restaurant_ids = chatbot_service_landing.query_menu_rag(q)
+    return {
+        "query": q,
+        "pinecone_connected": chatbot_service_landing.pinecone_index is not None,
+        "matched_items": items,
+        "matched_restaurant_ids": restaurant_ids,
+        "rag_working": len(items) > 0,
+    }

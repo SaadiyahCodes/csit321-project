@@ -9,7 +9,8 @@ if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
     tmp.close()
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = tmp.name
 
-
+from app.services.chatbot_service_landing import chatbot_service_landing
+from app.db.database import SessionLocal
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import engine
@@ -20,11 +21,23 @@ from app.routers import (
     customer_auth, customer_profile, customer_orders, 
     analytics, chatbot_landing
 )
+from contextlib import asynccontextmanager
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Gusto API", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    db = SessionLocal()
+    try:
+        chatbot_service_landing.build_menu_index(db)
+    finally:
+        db.close()
+    yield
+    # Shutdown (nothing needed)
+
+app = FastAPI(title="Gusto API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

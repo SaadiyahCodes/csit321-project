@@ -22,7 +22,7 @@ class ChatbotService:
         
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'models/gemini-flash-latest'
+            self.model_name = 'models/gemini-2.0-flash'
             self.enabled = True
             print("✅ Chatbot service initialized (Gemini)")
         else:

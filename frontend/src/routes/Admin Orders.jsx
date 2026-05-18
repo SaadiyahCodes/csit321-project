@@ -88,7 +88,7 @@ export default function AdminOrders() {
       <div style={{ background: '#fff', borderBottom: '1px solid #F3F4F6', boxShadow: '0 1px 8px rgba(0,0,0,0.04)', flexShrink: 0 }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', padding: '0 32px', display: 'flex', alignItems: 'center', gap: 16, height: 64 }}>
           <button
-            onClick={() => navigate('/admin/analytics')}
+            onClick={() => navigate('/admin')}
             style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 8, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#EA580C' }}
             onMouseEnter={e => e.currentTarget.style.background = '#FFEDD5'}
             onMouseLeave={e => e.currentTarget.style.background = '#FFF7ED'}

@@ -17,6 +17,13 @@ import { useToast } from "../../components/Toast";
 import { useCustomerAuth } from "../../context/CustomerAuthContext";
 import { useConfirm } from "../../components/ConfirmDialog";
 
+const CALORIE_RANGES = [
+  { label: "Under 300 kcal", min: 0,   max: 299      },
+  { label: "300–600 kcal",   min: 300, max: 600      },
+  { label: "600–900 kcal",   min: 601, max: 900      },
+  { label: "900+ kcal",      min: 901, max: Infinity },
+];
+
 export default function MenuPage() {
   const { restaurantId } = useParams();
   const { language, tSync } = useLanguage();
@@ -34,8 +41,9 @@ export default function MenuPage() {
   const [navScrolled, setNavScrolled] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [profileFilterEnabled, setProfileFilterEnabled] = useState(true);
+  const [selectedAllergens, setSelectedAllergens] = useState([]);
+  const [calorieRange, setCalorieRange] = useState(null); // null = no filter
 
-  // { [menu_item_id]: { qty, selectionItemId } }
   const [localCart, setLocalCart] = useState({});
   const debounceTimers = useRef({});
 
@@ -50,20 +58,27 @@ export default function MenuPage() {
     return () => Object.values(debounceTimers.current).forEach(clearTimeout);
   }, []);
 
+  const allAllergens = useMemo(() => {
+    const set = new Set();
+    menuItems.forEach(item => (item.allergens || []).forEach(a => set.add(a.toLowerCase().trim())));
+    return [...set];
+  }, [menuItems]);
+
+  const maxCalories = useMemo(() => {
+    const vals = menuItems.map(i => i.calories).filter(Boolean);
+    return vals.length ? Math.max(...vals) : 0;
+  }, [menuItems]);
+
   const getProfileConflicts = (item) => {
     if (!profile || !profileFilterEnabled) return [];
     const conflicts = [];
-
     const itemAllergens = (item.allergens || []).map(a => a.toLowerCase());
-
-    // Check allergens — direct match against item's allergens field
     for (const allergen of (profile.allergens || [])) {
       const a = allergen.toLowerCase();
       if (itemAllergens.some(ia => ia.includes(a) || a.includes(ia))) {
         conflicts.push(allergen);
       }
     }
-
     return conflicts;
   };
 
@@ -99,22 +114,19 @@ export default function MenuPage() {
       setLocalCart(map);
     } catch (err) {
       if (err.response?.status === 404) {
-        setLocalCart({}); // stale selection, just clear it silently
+        setLocalCart({});
       }
     }
   };
 
   const handleAddToCart = async (item, qty = 1, notes = null) => {
     if (!selectionId || !sessionId) return;
-
-    // Check profile conflicts
     const conflicts = getProfileConflicts(item);
     if (conflicts.length > 0) {
       const message = `⚠️ ${item.name} contains ${conflicts.join(", ")} which is listed in your allergen profile. Add anyway?`;
       const ok = await confirm(message, "Add", "#16a34a");
       if (!ok) return;
     }
-    
     setLocalCart(prev => ({
       ...prev,
       [item.id]: { qty: (prev[item.id]?.qty || 0) + qty, selectionItemId: prev[item.id]?.selectionItemId || null },
@@ -182,14 +194,29 @@ export default function MenuPage() {
   };
 
   const filtered = useMemo(() => {
-    if (activeCategory === "all") return menuItems;
-    return menuItems.filter(x => x?.category?.toLowerCase() === activeCategory);
-  }, [activeCategory, menuItems]);
+    let items = activeCategory === "all" ? menuItems : menuItems.filter(x => x?.category?.toLowerCase() === activeCategory);
+
+    if (selectedAllergens.length > 0) {
+      items = items.filter(item => {
+        const itemAllergens = (item.allergens || []).map(a => a.toLowerCase().trim());
+        return !selectedAllergens.some(a => itemAllergens.includes(a));
+      });
+    }
+
+    if (calorieRange) {
+      items = items.filter(item => {
+        if (!item.calories) return true; // show items with no calorie data
+        return item.calories >= calorieRange.min && item.calories <= calorieRange.max;
+      });
+    }
+
+    return items;
+  }, [activeCategory, menuItems, selectedAllergens, calorieRange]);
 
   return (
     <div style={{ minHeight: "100vh", background: "#fafaf8", paddingBottom: 60 }}>
 
-      {/* ── Sticky Top Navbar — locked LTR ── */}
+      {/* ── Sticky Top Navbar ── */}
       <nav dir="ltr" style={{
         position: "sticky", top: 0, zIndex: 400,
         background: navScrolled ? "rgba(255,255,255,0.93)" : "white",
@@ -362,6 +389,207 @@ export default function MenuPage() {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 20px 0" }}>
         <CategoryBar active={activeCategory} onChange={setActiveCategory} />
 
+        {/* ── Allergen Filters ── */}
+        {allAllergens.length > 0 && (
+          <div style={{
+            marginTop: 12,
+            background: "white",
+            borderRadius: 20,
+            padding: "16px 20px",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            border: "1px solid #f3f4f6",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+<div style={{
+    width: 28, height: 28, borderRadius: 8,
+    background: "linear-gradient(135deg,#f97316,#ea580c)",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 14,
+  }}>
+    ⚠️
+  </div>
+  <span style={{ fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.02em" }}>
+    Exclude Allergens
+  </span>
+                {selectedAllergens.length > 0 && (
+                  <span style={{
+                    background: "#f97316", color: "white",
+                    fontSize: 11, fontWeight: 700,
+                    borderRadius: 999, padding: "2px 7px",
+                    lineHeight: 1.6,
+                  }}>
+                    {selectedAllergens.length}
+                  </span>
+                )}
+              </div>
+              {selectedAllergens.length > 0 && (
+                <button
+                  onClick={() => setSelectedAllergens([])}
+                  style={{
+                    fontSize: 12, color: "#f97316", fontWeight: 600,
+                    background: "#fff7ed", border: "1px solid #fed7aa",
+                    borderRadius: 999, padding: "4px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {allAllergens.map(allergen => {
+                const active = selectedAllergens.includes(allergen);
+                return (
+                  <button
+                    key={allergen}
+                    onClick={() => setSelectedAllergens(prev =>
+                      active ? prev.filter(a => a !== allergen) : [...prev, allergen]
+                    )}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 14px", borderRadius: 999,
+                      fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", textTransform: "capitalize",
+                      transition: "all 0.18s ease",
+                      background: active ? "#fff7ed" : "#f9fafb",
+                      border: `1.5px solid ${active ? "#f97316" : "#e5e7eb"}`,
+                      color: active ? "#ea580c" : "#6b7280",
+                      boxShadow: active ? "0 2px 8px rgba(249,115,22,0.18)" : "none",
+                    }}
+                  >
+                    {allergen}
+                    {active && (
+                      <span style={{
+                        marginLeft: 2, fontSize: 10, fontWeight: 800,
+                        background: "#f97316", color: "white",
+                        borderRadius: "50%", width: 16, height: 16,
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      }}>✕</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedAllergens.length > 0 && (
+              <div style={{
+                marginTop: 12, paddingTop: 12,
+                borderTop: "1px dashed #f3f4f6",
+                fontSize: 12, color: "#9ca3af",
+                display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+              }}>
+                <span>🔍</span>
+                Hiding items containing: {selectedAllergens.map((a, i) => (
+                  <span key={a} style={{ color: "#f97316", fontWeight: 600, textTransform: "capitalize" }}>
+                    {a}{i < selectedAllergens.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Calorie Filter ── */}
+        {maxCalories > 0 && (
+          <div style={{
+            marginTop: 12,
+            background: "white",
+            borderRadius: 20,
+            padding: "16px 20px",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+            border: "1px solid #f3f4f6",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: "linear-gradient(135deg,#f97316,#ea580c)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14,
+                }}>
+                  🔥
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.02em" }}>
+                  Calorie Range
+                </span>
+                {calorieRange && (
+                  <span style={{
+                    background: "#f97316", color: "white",
+                    fontSize: 11, fontWeight: 700,
+                    borderRadius: 999, padding: "2px 7px",
+                    lineHeight: 1.6,
+                  }}>
+                    1
+                  </span>
+                )}
+              </div>
+              {calorieRange && (
+                <button
+                  onClick={() => setCalorieRange(null)}
+                  style={{
+                    fontSize: 12, color: "#f97316", fontWeight: 600,
+                    background: "#fff7ed", border: "1px solid #fed7aa",
+                    borderRadius: 999, padding: "4px 12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {CALORIE_RANGES.map(range => {
+                const active = calorieRange?.label === range.label;
+                return (
+                  <button
+                    key={range.label}
+                    onClick={() => setCalorieRange(active ? null : range)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "7px 14px", borderRadius: 999,
+                      fontSize: 13, fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "all 0.18s ease",
+                      background: active ? "#fff7ed" : "#f9fafb",
+                      border: `1.5px solid ${active ? "#f97316" : "#e5e7eb"}`,
+                      color: active ? "#ea580c" : "#6b7280",
+                      boxShadow: active ? "0 2px 8px rgba(249,115,22,0.18)" : "none",
+                    }}
+                  >
+                    {range.label}
+                    {active && (
+                      <span style={{
+                        marginLeft: 2, fontSize: 10, fontWeight: 800,
+                        background: "#f97316", color: "white",
+                        borderRadius: "50%", width: 16, height: 16,
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      }}>✕</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {calorieRange && (
+              <div style={{
+                marginTop: 12, paddingTop: 12,
+                borderTop: "1px dashed #f3f4f6",
+                fontSize: 12, color: "#9ca3af",
+                display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap",
+              }}>
+                <span>🔍</span>
+                Showing items with{" "}
+                <span style={{ color: "#f97316", fontWeight: 600 }}>{calorieRange.label}</span>
+                {" "}— items with no calorie data are always shown.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Menu Grid ── */}
         <div style={{
           marginTop: 16, background: "white", borderRadius: 24,
           padding: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",

@@ -131,6 +131,34 @@ export default function MenuCard({ item, onAR, onOpen, onAddToCart, onUpdateQty,
             {item.description || " "}
           </p>
 
+          {/* Allergen tags */}
+          {item.allergens?.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}>
+              {item.allergens.map((a, i) => (
+                <span key={i} style={{
+                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+                  background: "#fef9c3", color: "#854d0e", border: "1px solid #fde047",
+                  textTransform: "capitalize",
+                }}>
+                  {a}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {/* Calories */}
+{item.calories && (
+  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6 }}>
+    <span style={{
+      fontSize: 12, fontWeight: 600, padding: "2px 8px", borderRadius: 999,
+      background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d",
+      display: "flex", alignItems: "center", gap: 4,
+    }}>
+      🔥 {item.calories} kcal
+    </span>
+  </div>
+)}
+
           {/* Price + AR */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", paddingTop: 2 }}>
             {item.price && (

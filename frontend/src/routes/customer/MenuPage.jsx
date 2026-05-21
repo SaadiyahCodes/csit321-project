@@ -1,7 +1,7 @@
 // src/routes/customer/MenuPage.jsx
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ShoppingCart, ArrowLeft, MessageCircle, ShieldCheck, ShieldOff } from "lucide-react";
+import { ShoppingCart, ArrowLeft, MessageCircle, ShieldCheck, ShieldOff, AlertTriangle, Flame } from "lucide-react";
 import CategoryBar from "../../components/CategoryBar";
 import MenuCard from "../../components/MenuCard";
 import DishBottomSheet from "../../components/DishBottomSheet";
@@ -398,20 +398,19 @@ export default function MenuPage() {
             padding: "16px 20px",
             boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
             border: "1px solid #f3f4f6",
-          }}>
+          }} dir="ltr">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-<div style={{
-    width: 28, height: 28, borderRadius: 8,
-    background: "linear-gradient(135deg,#f97316,#ea580c)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: 14,
-  }}>
-    ⚠️
-  </div>
-  <span style={{ fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.02em" }}>
-    Exclude Allergens
-  </span>
+              <div style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  background: "linear-gradient(135deg,#f97316,#ea580c)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                  <AlertTriangle size={16} color="white" />
+              </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.02em" }}>
+                  Exclude Allergens
+                </span>
                 {selectedAllergens.length > 0 && (
                   <span style={{
                     background: "#f97316", color: "white",
@@ -500,16 +499,15 @@ export default function MenuPage() {
             padding: "16px 20px",
             boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
             border: "1px solid #f3f4f6",
-          }}>
+          }} dir="ltr">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{
-                  width: 28, height: 28, borderRadius: 8,
-                  background: "linear-gradient(135deg,#f97316,#ea580c)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 14,
+                    width: 28, height: 28, borderRadius: 8,
+                    background: "linear-gradient(135deg,#f97316,#ea580c)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  🔥
+                    <Flame size={16} color="white" />
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#374151", letterSpacing: "0.02em" }}>
                   Calorie Range

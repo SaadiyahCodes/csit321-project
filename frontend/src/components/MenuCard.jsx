@@ -1,5 +1,5 @@
 // src/components/MenuCard.jsx
-import { Plus, Minus } from "lucide-react";
+import { Plus, Minus, Flame } from "lucide-react";
 
 export default function MenuCard({ item, onAR, onOpen, onAddToCart, onUpdateQty, cartQty = 0 }) {
   if (!item) return null;
@@ -154,7 +154,7 @@ export default function MenuCard({ item, onAR, onOpen, onAddToCart, onUpdateQty,
       background: "#fef3c7", color: "#92400e", border: "1px solid #fcd34d",
       display: "flex", alignItems: "center", gap: 4,
     }}>
-      🔥 {item.calories} kcal
+      <Flame size={12} color="#92400e" /> {item.calories} kcal
     </span>
   </div>
 )}

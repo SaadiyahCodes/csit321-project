@@ -200,6 +200,11 @@ Return ONLY the translation, nothing else."""
                 ingredients, target_lang, use_gemini=use_gemini
             ) if ingredients else {"translated_text": ingredients}
 
+            ALLERGEN_OVERRIDES = {
+                "hi": {"nuts": "मेवे", "tree nuts": "मेवे"},
+                # add more languages/allergens here if needed
+            }
+
             # Allergens are short common words — no food context needed
             allergens = item.get("allergens", [])
             translated_allergens = []
@@ -207,6 +212,10 @@ Return ONLY the translation, nothing else."""
                 allergen = allergen.strip()
                 if not allergen or allergen.lower() == "none":
                     translated_allergens.append(allergen)
+                    continue
+                override = ALLERGEN_OVERRIDES.get(target_lang, {}).get(allergen.lower())
+                if override:
+                    translated_allergens.append(override)
                     continue
                 result = self.translate_text(allergen, target_lang, use_gemini=False)
                 translated_allergens.append(result.get("translated_text", allergen))
